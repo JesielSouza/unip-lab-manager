@@ -46,7 +46,11 @@
 
             <div class="mb-3">
               <label class="form-label">Professor</label>
-              <input type="text" class="form-control" name="professor" required placeholder="Nome do docente" value="{% if reserva %}{{ reserva.professor }}{% endif %}">
+              {% if usuario and usuario.role == 'professor' %}
+                <input type="text" class="form-control" name="professor" value="{{ usuario.login }}" readonly>
+              {% elif usuario and usuario.role in ['coordenador', 'admin'] %}
+                <input type="text" class="form-control" name="professor" required placeholder="Nome do docente" value="{% if reserva %}{{ reserva.professor }}{% endif %}">
+              {% endif %}
             </div>
 
             <div class="row">

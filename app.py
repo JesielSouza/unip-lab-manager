@@ -1,3 +1,4 @@
+from sqlalchemy import or_
 from models import ReservaLab, db, Usuario
 from flask import Flask, render_template, request, redirect, session, url_for
 import json, os
@@ -17,6 +18,56 @@ migrate = Migrate(app, db)
 # Inicia o banco com o app
 from models import db, Usuario
 db.init_app(app)
+
+# Rota de relatório/filtro para coordenador e admin
+@app.route("/relatorio_reservas", methods=["GET", "POST"])
+def relatorio_reservas():
+    if "usuario" not in session:
+        return redirect("/login")
+    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not usuario:
+        session.clear()
+        return redirect("/login")
+    if usuario.role not in ["coordenador", "admin"]:
+        return "Acesso negado", 403
+
+    # Filtros
+    turma = request.form.get("turma") if request.method == "POST" else None
+    disciplina = request.form.get("disciplina") if request.method == "POST" else None
+    periodo = request.form.get("periodo") if request.method == "POST" else None
+    status = request.form.get("status") if request.method == "POST" else None
+
+    query = ReservaLab.query
+    if turma:
+        query = query.filter(ReservaLab.turma.ilike(f"%{turma}%"))
+    if disciplina:
+        query = query.filter(ReservaLab.disciplina.ilike(f"%{disciplina}%"))
+    if periodo:
+        query = query.filter(ReservaLab.periodo == periodo)
+    if status:
+        query = query.filter(ReservaLab.status == status)
+
+    reservas = query.order_by(ReservaLab.data.desc()).all()
+
+    # Para popular selects
+    turmas = [t[0] for t in db.session.query(ReservaLab.turma).distinct().all() if t[0]]
+    disciplinas = [d[0] for d in db.session.query(ReservaLab.disciplina).distinct().all() if d[0]]
+    periodos = [p[0] for p in db.session.query(ReservaLab.periodo).distinct().all() if p[0]]
+    status_list = ["pendente", "aprovado", "rejeitado"]
+
+    return render_template(
+        "relatorio_reservas.html",
+        reservas=reservas,
+        turmas=turmas,
+        disciplinas=disciplinas,
+        periodos=periodos,
+        status_list=status_list,
+        filtro_turma=turma or "",
+        filtro_disciplina=disciplina or "",
+        filtro_periodo=periodo or "",
+        filtro_status=status or "",
+        usuario_logado=usuario.login
+    )
 
 def sugerir_categoria(nome_tarefa):
     nome = nome_tarefa.lower()
@@ -95,9 +146,13 @@ def cadastro():
         db.session.add(novo_usuario)
         db.session.commit()
 
-        session["usuario"] = login
-        return redirect(url_for("painel_unip"))
-    
+        # Só loga automaticamente se não estiver autenticado (ou seja, não é admin criando)
+        if "usuario" not in session:
+            session["usuario"] = login
+            return redirect(url_for("painel_unip"))
+        else:
+            # Se for admin criando, volta para a lista de usuários
+            return redirect(url_for("admin_usuarios"))
     # Se for GET (acesso normal), exibe a página
     return render_template("cadastro.html")
 
@@ -117,11 +172,20 @@ def nova_reserva():
 
     if request.method == "POST":
         laboratorio = request.form["laboratorio"]
-        professor = request.form["professor"]
         turma = request.form["turma"]
         disciplina = request.form["disciplina"]
         data = request.form["data"]
         periodo = request.form["periodo"]
+
+        # Preencher automaticamente o campo professor com o nome do usuário logado
+        if usuario.role == 'professor':
+            professor = usuario.login
+            usuario_id_reserva = usuario.id
+        else:
+            professor = request.form["professor"]
+            # Buscar usuário correspondente ao nome informado
+            usuario_prof = Usuario.query.filter_by(login=professor, role='professor').first()
+            usuario_id_reserva = usuario_prof.id if usuario_prof else None
 
         # Status baseado no role: coordenadores e admins aprovam automaticamente
         status = 'aprovado' if usuario.role in ['coordenador', 'admin'] else 'pendente'
@@ -134,7 +198,7 @@ def nova_reserva():
             data=data,
             periodo=periodo,
             status=status,
-            usuario_id=usuario.id
+            usuario_id=usuario_id_reserva
         )
 
         db.session.add(nova)
@@ -142,7 +206,7 @@ def nova_reserva():
 
         return redirect("/painel_unip")
 
-    return render_template("nova_reserva.html", reserva=None)
+    return render_template("nova_reserva.html", reserva=None, usuario=usuario)
 
 
 
@@ -186,17 +250,23 @@ def editar_reserva(id):
     
     if request.method == "POST":
         reserva.laboratorio = request.form["laboratorio"]
-        reserva.professor = request.form["professor"]
+        # Preencher professor conforme perfil
+        if usuario_logado.role == 'professor':
+            reserva.professor = usuario_logado.login
+            # Sempre que o professor editar, volta para pendente
+            reserva.status = 'pendente'
+        else:
+            reserva.professor = request.form.get("professor", reserva.professor)
+            # Coordenador/admin mantém status atual
         reserva.turma = request.form["turma"]
         reserva.disciplina = request.form["disciplina"]
         reserva.data = request.form["data"]
         reserva.periodo = request.form["periodo"]
-        
         db.session.commit()
         return redirect(url_for("painel_unip"))
     
     # Reutilizamos o template 'nova_reserva.html', mas passando a reserva existente
-    return render_template("nova_reserva.html", reserva=reserva)
+    return render_template("nova_reserva.html", reserva=reserva, usuario=usuario_logado)
 
 @app.route("/excluir/<int:id>")
 def excluir(id):

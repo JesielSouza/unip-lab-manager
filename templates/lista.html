@@ -36,6 +36,7 @@
       {% endif %}
       {% if role in ['coordenador', 'admin'] %}
       <a href="/coordenador/reservas" class="btn btn-info shadow-sm ms-2">Gerenciar Reservas</a>
+      <a href="/relatorio_reservas" class="btn btn-warning shadow-sm ms-2">Relatório de Reservas</a>
       {% endif %}
       {% if role == 'professor' %}
       <a href="/ver_alunos_turmas" class="btn btn-secondary shadow-sm ms-2">Ver Alunos por Turma</a>
@@ -63,6 +64,7 @@
             {% endif %}
           </div>
           
+          {% if role != 'aluno' %}
           <div class="d-flex gap-2">
             {% if role in ['coordenador', 'admin'] or (role == 'professor' and reserva.usuario_id == usuario_id) %}
             <a href="/editar/{{ reserva.id }}" class="btn btn-outline-primary btn-sm">
@@ -73,6 +75,7 @@
             </a>
             {% endif %}
           </div>
+          {% endif %}
         </div>
       </div>
     {% endfor %}
