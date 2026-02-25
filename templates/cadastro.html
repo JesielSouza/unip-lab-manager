@@ -37,9 +37,45 @@
             <input type="password" class="form-control" name="senha" required placeholder="Crie uma senha forte">
           </div>
           <div class="mb-3">
-            <label for="confirmar" class="form-label">Confirmar Senha</label>
-            <input type="password" class="form-control" name="confirmar_senha" required placeholder="Repita a senha">
+            <label for="role" class="form-label">Tipo de Usuário</label>
+            <select class="form-select" name="role" required>
+              <option value="aluno" selected>Aluno</option>
+              <option value="professor">Professor</option>
+              <option value="coordenador">Coordenador de Curso</option>
+            </select>
           </div>
+          <div class="mb-3" id="turma-field" style="display:none;">
+            <label for="turma" class="form-label">Turma</label>
+            <input type="text" class="form-control" name="turma" placeholder="Ex: DS1P30 / CC2A18">
+          </div>
+          <div class="mb-3" id="semestre-field" style="display:none;">
+            <label for="semestre" class="form-label">Semestre</label>
+            <select class="form-select" name="semestre">
+              <option value="">Selecione</option>
+              <option value="1">1º Semestre</option>
+              <option value="2">2º Semestre</option>
+              <option value="3">3º Semestre</option>
+              <option value="4">4º Semestre</option>
+              <option value="5">5º Semestre</option>
+              <option value="6">6º Semestre</option>
+            </select>
+          </div>
+          <script>
+            const roleSelect = document.querySelector('select[name="role"]');
+            const turmaField = document.getElementById('turma-field');
+            const semestreField = document.getElementById('semestre-field');
+            function toggleFields() {
+              if (roleSelect.value === 'aluno') {
+                turmaField.style.display = '';
+                semestreField.style.display = '';
+              } else {
+                turmaField.style.display = 'none';
+                semestreField.style.display = 'none';
+              }
+            }
+            roleSelect.addEventListener('change', toggleFields);
+            window.onload = toggleFields;
+          </script>
           <div class="d-grid">
             <button type="submit" class="btn btn-success">Finalizar Cadastro</button>
           </div>

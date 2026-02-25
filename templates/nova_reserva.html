@@ -18,7 +18,7 @@
     <div class="col-md-8">
       <div class="card shadow unip-card">
         <div class="card-body p-4">
-          <h3 class="text-center mb-4"><i class="bi bi-calendar-plus"></i> Agendar Laboratório</h3>
+          <h3 class="text-center mb-4"><i class="bi bi-calendar-plus"></i> {% if reserva %}Editar{% else %}Agendar{% endif %} Reserva</h3>
           
           <form method="post">
             <div class="row">
@@ -26,43 +26,43 @@
                 <label class="form-label font-weight-bold">Laboratório</label>
                 <select class="form-select" name="laboratorio" required>
                   <option value="" selected disabled>Selecione o Lab</option>
-                  <option value="Lab 01">Laboratório 01</option>
-                  <option value="Lab 02">Laboratório 02</option>
-                  <option value="Lab 03">Laboratório 03</option>
-                  <option value="Lab 04">Laboratório 04</option>
-                  <option value="Lab Redes">Laboratório de Redes</option>
+                  <option value="Lab 01" {% if reserva and reserva.laboratorio == 'Lab 01' %}selected{% endif %}>Laboratório 01</option>
+                  <option value="Lab 02" {% if reserva and reserva.laboratorio == 'Lab 02' %}selected{% endif %}>Laboratório 02</option>
+                  <option value="Lab 03" {% if reserva and reserva.laboratorio == 'Lab 03' %}selected{% endif %}>Laboratório 03</option>
+                  <option value="Lab 04" {% if reserva and reserva.laboratorio == 'Lab 04' %}selected{% endif %}>Laboratório 04</option>
+                  <option value="Lab Redes" {% if reserva and reserva.laboratorio == 'Lab Redes' %}selected{% endif %}>Laboratório de Redes</option>
                 </select>
               </div>
 
               <div class="col-md-6 mb-3">
                 <label class="form-label">Período</label>
                 <select class="form-select" name="periodo" required>
-                  <option value="Manhã">Manhã</option>
-                  <option value="Tarde">Tarde</option>
-                  <option value="Noite">Noite</option>
+                  <option value="Manhã" {% if reserva and reserva.periodo == 'Manhã' %}selected{% endif %}>Manhã</option>
+                  <option value="Tarde" {% if reserva and reserva.periodo == 'Tarde' %}selected{% endif %}>Tarde</option>
+                  <option value="Noite" {% if reserva and reserva.periodo == 'Noite' %}selected{% endif %}>Noite</option>
                 </select>
               </div>
             </div>
 
             <div class="mb-3">
               <label class="form-label">Professor</label>
-              <input type="text" class="form-control" name="professor" required placeholder="Nome do docente">
+              <input type="text" class="form-control" name="professor" required placeholder="Nome do docente" value="{% if reserva %}{{ reserva.professor }}{% endif %}">
             </div>
 
             <div class="row">
               <div class="col-md-6 mb-3">
                 <label class="form-label">Disciplina</label>
-                <input type="text" class="form-control" name="disciplina" required placeholder="Ex: Algoritmos">
+                <input type="text" class="form-control" name="disciplina" required placeholder="Ex: Algoritmos" value="{% if reserva %}{{ reserva.disciplina }}{% endif %}">
               </div>
               <div class="col-md-6 mb-3">
                 <label class="form-label">Turma</label>
-                <input type="text" class="form-control" name="turma" required placeholder="Ex: DS1P30 / CC2A18">
+                <input type="text" class="form-control" name="turma" required placeholder="Ex: DS1P30 / CC2A18" value="{% if reserva %}{{ reserva.turma }}{% endif %}">
               </div>
             </div>
 
             <div class="mb-4">
               <label class="form-label">Data da Aula</label>
-              <input type="date" class="form-control" name="data" required>
+              <input type="date" class="form-control" name="data" required value="{% if reserva %}{{ reserva.data }}{% endif %}">
             </div>
 
             <div class="d-grid gap-2">

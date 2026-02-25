@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Editar Usuário | UNIP Lab Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; }
+  </style>
+</head>
+<body>
+
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow">
+        <div class="card-body">
+          <h3 class="text-center mb-4">Editar Usuário</h3>
+          <form method="post">
+            <div class="mb-3">
+              <label class="form-label">Login</label>
+              <input type="text" class="form-control" name="login" value="{{ user.login }}" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" name="email" value="{{ user.email }}" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Role</label>
+              <select class="form-select" name="role" required>
+                <option value="aluno" {% if user.role == 'aluno' %}selected{% endif %}>Aluno</option>
+                <option value="professor" {% if user.role == 'professor' %}selected{% endif %}>Professor</option>
+                <option value="coordenador" {% if user.role == 'coordenador' %}selected{% endif %}>Coordenador de Curso</option>
+                <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Turma</label>
+              <input type="text" class="form-control" name="turma" value="{% if user.turma %}{{ user.turma }}{% endif %}">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Semestre</label>
+              <select class="form-select" name="semestre">
+                <option value="">Selecione</option>
+                <option value="1" {% if user.semestre == '1' %}selected{% endif %}>1º Semestre</option>
+                <option value="2" {% if user.semestre == '2' %}selected{% endif %}>2º Semestre</option>
+                <option value="3" {% if user.semestre == '3' %}selected{% endif %}>3º Semestre</option>
+                <option value="4" {% if user.semestre == '4' %}selected{% endif %}>4º Semestre</option>
+                <option value="5" {% if user.semestre == '5' %}selected{% endif %}>5º Semestre</option>
+                <option value="6" {% if user.semestre == '6' %}selected{% endif %}>6º Semestre</option>
+              </select>
+            </div>
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-primary">Salvar</button>
+              <a href="/admin/usuarios" class="btn btn-light border">Voltar</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
