@@ -23,7 +23,7 @@
     <div class="card shadow-sm">
       <div class="card-body">
         <h3 class="card-title text-center mb-4">Criar Conta</h3>
-        <form method="post">
+        <form action="/cadastro" method="post">
           <div class="mb-3">
             <label for="usuario" class="form-label">Nome de Usuário</label>
             <input type="text" class="form-control" name="login" required placeholder="Escolha um nome de usuário">
@@ -38,10 +38,13 @@
           </div>
           <div class="mb-3">
             <label for="confirmar" class="form-label">Confirmar Senha</label>
-            <input type="password" class="form-control" name="senha" required placeholder="Repita a senha">
+            <input type="password" class="form-control" name="confirmar_senha" required placeholder="Repita a senha">
           </div>
           <div class="d-grid">
-            <button href="/login" type="submit" class="btn btn-success">Cadastrar</button>
+            <button type="submit" class="btn btn-success">Finalizar Cadastro</button>
+          </div>
+          <div class="text-center mt-3">
+            <a href="/login" class="text-decoration-none">Já tem conta? Faça Login</a>
           </div>
         </form>
       </div>

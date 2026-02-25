@@ -1,6 +1,5 @@
 from models import db, Usuario
 from flask import Flask, render_template, request, redirect, session, url_for
-from app import db
 import json, os
 import bcrypt
 
@@ -17,6 +16,16 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 from models import db, Usuario, Tarefa
 db.init_app(app)
 
+def sugerir_categoria(nome_tarefa):
+    nome = nome_tarefa.lower()
+    if any(palavra in nome for palavra in ["pagar", "comprar", "boleto", "dinheiro", "cartão"]):
+        return "Financeiro", "Alta"
+    if any(palavra in nome for palavra in ["estudar", "ler", "curso", "prova", "faculdade"]):
+        return "Estudos", "Média"
+    if any(palavra in nome for palavra in ["treino", "academia", "correr", "médico", "saúde"]):
+        return "Saúde", "Alta"
+    return "Geral", "Baixa"
+
 
 # Utilitário: carregar usuários
 def carregar_usuarios():
@@ -30,6 +39,12 @@ def carregar_usuarios():
 def salvar_usuarios(usuarios):
     with open("usuarios.json", "w", encoding="utf-8") as f:
         json.dump(usuarios, f, indent=4, ensure_ascii=False)
+
+@app.route("/")
+def index():
+    if "usuario" in session:
+        return redirect("/tarefas")
+    return redirect("/login")
 
 # Rota de login (GET e POST)
 @app.route("/login", methods=["GET", "POST"])
@@ -48,11 +63,7 @@ def login():
             return "Senha Incorreta", 401
     return render_template("login.html")
 
-# Rota de cadastro
-@app.route("/cadastrar")
-def cadastrar():
-    return render_template("cadastro.html")
-
+# Rota unificada de cadastro
 @app.route("/cadastro", methods=["GET", "POST"])
 def cadastro():
     if request.method == "POST":
@@ -62,21 +73,24 @@ def cadastro():
 
         usuario_existente = Usuario.query.filter_by(login=login).first()
         if usuario_existente:
-            return "⚠️ Usuário já existe"
+            return "⚠️ Usuário já existe", 400
         
+        # Gerando o Hash da senha
         senha_hash = bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
         
         novo_usuario = Usuario(
-            login = login, 
-            email = email, 
-            senha_hash = senha_hash
+            login=login, 
+            email=email, 
+            senha_hash=senha_hash
         )
 
         db.session.add(novo_usuario)
         db.session.commit()
 
         session["usuario"] = login
-        return redirect("/tarefas")
+        return redirect(url_for("tarefas"))
+    
+    # Se for GET (acesso normal), exibe a página
     return render_template("cadastro.html")
 
 @app.route("/nova", methods=["GET", "POST"])
@@ -105,7 +119,7 @@ def nova_tarefa():
 
         return redirect("/tarefas")
 
-    return render_template("nova.html")
+    return render_template("nova.html", tarefa=None)
 
 
 
@@ -118,6 +132,37 @@ def tarefas():
     tarefas = Tarefa.query.filter_by(usuario_id=usuario.id).all()
 
     return render_template("lista.html", tarefas=tarefas, usuario=usuario.login)
+
+@app.route("/editar/<int:id>", methods=["GET", "POST"])
+def editar_tarefa(id):
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    tarefa = Tarefa.query.get_or_404(id)
+    
+    if request.method == "POST":
+        tarefa.nome = request.form["nome"]
+        tarefa.prazo = request.form["prazo"]
+        tarefa.prioridade = request.form["prioridade"]
+        tarefa.categoria = request.form["categoria"]
+        
+        db.session.commit()
+        return redirect(url_for("tarefas"))
+    
+    # Reutilizamos o template 'nova.html', mas passando a tarefa existente
+    return render_template("nova.html", tarefa=tarefa)
+
+@app.route("/excluir/<int:id>")
+def excluir(id):
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    tarefa = Tarefa.query.get(id)
+    if tarefa:
+        db.session.delete(tarefa)
+        db.session.commit()
+    
+    return redirect(url_for("tarefas"))
 
 @app.route("/logout")
 def logout():

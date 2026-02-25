@@ -1,3 +1,7 @@
 __pycache__
 ORGANIZADOR DE TAREFAS old
 antigo db
+instance/
+__pycache__/
+*.pyc
+.env
