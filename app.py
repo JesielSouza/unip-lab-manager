@@ -93,33 +93,37 @@ def cadastro():
     # Se for GET (acesso normal), exibe a página
     return render_template("cadastro.html")
 
-@app.route("/nova", methods=["GET", "POST"])
-def nova_tarefa():
+@app.route("/nova_reserva", methods=["GET", "POST"])
+def nova_reserva():
     if "usuario" not in session:
         return redirect("/login")
 
     usuario = Usuario.query.filter_by(login=session["usuario"]).first()
 
     if request.method == "POST":
-        nome = request.form["nome"]
-        prazo = request.form["prazo"]
-        prioridade = request.form["prioridade"]
-        categoria = request.form["categoria"]
+        laboratorio = request.form["laboratorio"]
+        professor = request.form["professor"]
+        turma = request.form["turma"]
+        disciplina = request.form["disciplina"]
+        data = request.form["data"]
+        periodo = request.form["periodo"]
 
-        nova = Tarefa(
-            nome=nome,
-            prazo=prazo,
-            prioridade=prioridade,
-            categoria=categoria,
+        nova = ReservaLab(
+            laboratorio=laboratorio,
+            professor=professor,
+            turma=turma,
+            disciplina=disciplina,
+            data=data,
+            periodo=periodo,
             usuario_id=usuario.id
         )
 
         db.session.add(nova)
         db.session.commit()
 
-        return redirect("/tarefas")
+        return redirect("/painel_unip")
 
-    return render_template("nova.html", tarefa=None)
+    return render_template("nova_reserva.html", tarefa=None)
 
 
 

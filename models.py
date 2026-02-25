@@ -9,10 +9,14 @@ class Usuario(db.Model):
     senha_hash = db.Column(db.String(128), nullable=False)
     tarefas = db.relationship('Tarefa', backref='usuario', lazy=True)
 
-class Tarefa(db.Model):
+class ReservaLab(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String(120), nullable=False)
-    prazo = db.Column(db.String(20))
-    prioridade = db.Column(db.String(10))
-    categoria = db.Column(db.String(50))
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    laboratorio = db.Column(db.String(50), nullable=False)
+    professor = db.Column(db.String(100), nullable=False)
+    turma = db.Column(db.String(50), nullable=False)
+    disciplina = db.Column(db.String(100), nullable=False)
+    data = db.Column(db.String(10), nullable=False) # Armazena YYYY-MM-DD
+    periodo = db.Column(db.String(20), nullable=False) # Manhã, Tarde, Noite
+    
+    # Vinculamos ao usuário que fez o registro
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'))
