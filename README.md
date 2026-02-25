@@ -1,13 +1,48 @@
-# 🏫 UNIP - Gestão de Laboratórios
+# 🏫 UNIP Lab Manager
 
-Sistema para controle de ocupação de laboratórios de informática, permitindo o registro de aulas por professor, turma e disciplina.
+Sistema Flask para gestão de reservas de laboratórios de informática da UNIP.
 
-## 📋 Funcionalidades
-- **Agendamento por Período**: Manhã, Tarde e Noite.
-- **Vínculo Acadêmico**: Registro completo com Professor, Turma e Disciplina.
-- **Filtro por Laboratório**: Organização clara de qual sala está ocupada.
+## Funcionalidades
+- Controle de usuários: Admin, Coordenador, Professor, Aluno
+- Permissões por perfil (CRUD, aprovação, visualização)
+- Cadastro de reservas por professores (com aprovação do coordenador)
+- Alunos só visualizam reservas da sua turma
+- Admin não tem vínculo acadêmico, só gerencia usuários e sistema
+- Migrações automáticas de banco com Flask-Migrate
+- Templates separados por contexto
+- Segurança de sessão e roles
 
-## 🛠️ Setup
-1. Instale as dependências: `pip install -r requirements.txt`
-2. Inicie o banco: `python -c "from app import db; db.create_all()"`
-3. Execute: `python app.py`
+## Como rodar
+1. Instale as dependências:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Configure o banco (primeira vez):
+   ```bash
+   flask db upgrade
+   python setup_db.py  # Cria admin inicial
+   ```
+3. Execute o sistema:
+   ```bash
+   python app.py
+   ```
+
+## Como evoluir o banco
+- Para adicionar/remover campos:
+  ```bash
+  flask db migrate -m "sua mensagem"
+  flask db upgrade
+  ```
+
+## Como contribuir
+- Consulte o arquivo `contexto_projeto.md` (não versionado) para histórico e próximos passos.
+- Siga as permissões e regras de cada perfil.
+
+## Próximos passos sugeridos
+- Relatórios para coordenador
+- Logs de auditoria
+- Upload de arquivos
+- Refino de UX para mobile
+
+---
+> Projeto em desenvolvimento contínuo. Para dúvidas, consulte o contexto ou abra uma issue.
