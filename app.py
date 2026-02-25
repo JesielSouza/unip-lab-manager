@@ -1,4 +1,4 @@
-from models import db, Usuario
+from models import ReservaLab, db, Usuario
 from flask import Flask, render_template, request, redirect, session, url_for
 import json, os
 import bcrypt
