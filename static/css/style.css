@@ -1,0 +1,70 @@
+/* Identidade Visual UNIP */
+:root {
+    --unip-blue: #003366;
+    --unip-gold: #f5b915;
+    --unip-light: #f8f9fa;
+    --status-pending: #ffc107;
+    --status-approved: #28a745;
+    --status-rejected: #dc3545;
+}
+
+body {
+    background-color: #f4f7f6;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Navbar Institucional */
+.navbar {
+    background-color: var(--unip-blue) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-brand, .nav-link {
+    color: white !important;
+    font-weight: 600;
+}
+
+/* Cards de Reserva */
+.card-reserva {
+    border: none;
+    border-left: 5px solid var(--unip-blue);
+    border-radius: 8px;
+    transition: transform 0.2s;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    margin-bottom: 1rem;
+}
+
+.card-reserva:hover {
+    transform: translateY(-5px);
+}
+
+/* Badges de Status */
+.badge-status {
+    padding: 0.5em 1em;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    color: white;
+}
+
+.status-pendente { background-color: var(--status-pending); color: #212529; }
+.status-aprovado { background-color: var(--status-approved); }
+.status-rejeitado { background-color: var(--status-rejected); }
+
+/* Tabela de Dashboard */
+.table-unip thead {
+    background-color: var(--unip-blue);
+    color: white;
+}
+
+.btn-unip {
+    background-color: var(--unip-blue);
+    color: white;
+    border-radius: 20px;
+    padding: 8px 20px;
+    border: none;
+}
+
+.btn-unip:hover {
+    background-color: #002244;
+    color: var(--unip-gold);
+}

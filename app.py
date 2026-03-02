@@ -1,6 +1,6 @@
 from sqlalchemy import or_
 from models import ReservaLab, db, Usuario
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, jsonify, render_template, request, redirect, session, url_for, flash
 import json, os
 import bcrypt
 from flask_migrate import Migrate
@@ -68,16 +68,6 @@ def relatorio_reservas():
         filtro_status=status or "",
         usuario_logado=usuario.login
     )
-
-def sugerir_categoria(nome_tarefa):
-    nome = nome_tarefa.lower()
-    if any(palavra in nome for palavra in ["pagar", "comprar", "boleto", "dinheiro", "cartão"]):
-        return "Financeiro", "Alta"
-    if any(palavra in nome for palavra in ["estudar", "ler", "curso", "prova", "faculdade"]):
-        return "Estudos", "Média"
-    if any(palavra in nome for palavra in ["treino", "academia", "correr", "médico", "saúde"]):
-        return "Saúde", "Alta"
-    return "Geral", "Baixa"
 
 
 # Utilitário: carregar usuários
@@ -156,59 +146,86 @@ def cadastro():
     # Se for GET (acesso normal), exibe a página
     return render_template("cadastro.html")
 
+@app.route("/api/eventos")
+def api_eventos():
+    # Buscamos todas as reservas que não foram rejeitadas
+    reservas = ReservaLab.query.filter(ReservaLab.status != 'rejeitado').all()
+    eventos = []
+    
+    for r in reservas:
+        # Definimos a cor baseada no status ou se é um bloqueio
+        cor = "#003366" # Azul UNIP (Aprovado)
+        if r.status == 'pendente':
+            cor = "#ffc107" # Amarelo (Aguardando)
+        if "MANUTENÇÃO" in r.disciplina.upper() or r.status == 'bloqueado':
+            cor = "#dc3545" # Vermelho (Bloqueio Admin)
+
+        eventos.append({
+            "id": r.id,
+            "title": f"{r.laboratorio} - {r.turma}",
+            "start": r.data,
+            "color": cor,
+            "extendedProps": {
+                "professor": r.professor,
+                "disciplina": r.disciplina,
+                "periodo": r.periodo
+            }
+        })
+    return jsonify(eventos)
+
+
 @app.route("/nova_reserva", methods=["GET", "POST"])
 def nova_reserva():
     if "usuario" not in session:
         return redirect("/login")
-
-    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario:
-        session.clear()
-        return redirect("/login")
-
-    # Alunos não podem criar reservas
-    if usuario.role == 'aluno':
-        return "Acesso negado: Alunos não podem solicitar reservas.", 403
+    
+    # Busca o usuário para saber o Role (Admin, Coordenador ou Professor)
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
 
     if request.method == "POST":
-        laboratorio = request.form["laboratorio"]
-        turma = request.form["turma"]
-        disciplina = request.form["disciplina"]
-        data = request.form["data"]
-        periodo = request.form["periodo"]
+        laboratorio = request.form.get("laboratorio")
+        data = request.form.get("data")
+        periodo = request.form.get("periodo")
+        turma = request.form.get("turma")
+        disciplina = request.form.get("disciplina")
 
-        # Preencher automaticamente o campo professor com o nome do usuário logado
-        if usuario.role == 'professor':
-            professor = usuario.login
-            usuario_id_reserva = usuario.id
-        else:
-            professor = request.form["professor"]
-            # Buscar usuário correspondente ao nome informado
-            usuario_prof = Usuario.query.filter_by(login=professor, role='professor').first()
-            usuario_id_reserva = usuario_prof.id if usuario_prof else None
+        # 1. VALIDAÇÃO DE CONFLITO (Cruzamento de dados)
+        conflito = ReservaLab.query.filter_by(
+            laboratorio=laboratorio,
+            data=data,
+            periodo=periodo
+        ).first()
 
-        # Status baseado no role: coordenadores e admins aprovam automaticamente
-        status = 'aprovado' if usuario.role in ['coordenador', 'admin'] else 'pendente'
+        if conflito:
+            return render_template("nova_reserva.html", 
+                                 erro=f"Atenção: O {laboratorio} já está ocupado em {data} ({periodo}).", 
+                                 usuario=usuario_logado, # Corrigido para bater com o template
+                                 reserva=None)
 
+        # 2. DIFERENCIAÇÃO DE STATUS (Admin já nasce aprovado)
+        status_inicial = 'pendente'
+        if usuario_logado.role == 'admin':
+            status_inicial = 'aprovado' # Ou 'confirmado', como preferir chamar
+
+        # 3. CRIAÇÃO DA RESERVA
         nova = ReservaLab(
             laboratorio=laboratorio,
-            professor=professor,
+            professor=usuario_logado.login,
             turma=turma,
             disciplina=disciplina,
             data=data,
             periodo=periodo,
-            status=status,
-            usuario_id=usuario_id_reserva
+            usuario_id=usuario_logado.id,
+            status=status_inicial
         )
-
+        
         db.session.add(nova)
         db.session.commit()
-
+        
+        flash("Reserva solicitada com sucesso!", "success")
         return redirect("/painel_unip")
 
-    return render_template("nova_reserva.html", reserva=None, usuario=usuario)
-
-
+    return render_template("nova_reserva.html", reserva=None, usuario=usuario_logado)
 
 @app.route("/painel_unip")
 def painel_unip():
@@ -435,23 +452,29 @@ def rejeitar_reserva(id):
     return redirect(url_for("coordenador_reservas"))
 
 @app.route("/ver_alunos_turmas")
-def ver_alunos_turmas():
+@app.route("/ver_alunos_turmas/<turma_selecionada>")
+def ver_alunos_turmas(turma_selecionada=None):
     if "usuario" not in session:
         return redirect("/login")
     
     usuario = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario:
-        session.clear()
-        return redirect("/login")
-    
     if usuario.role != 'professor':
         return "Acesso negado", 403
     
-    # Obter turmas únicas das reservas do professor
-    turmas = db.session.query(ReservaLab.turma).filter_by(usuario_id=usuario.id).distinct().all()
-    turmas = [t[0] for t in turmas if t[0]]
+    # 1. Busca as turmas onde o professor tem reservas confirmadas ou pendentes
+    turmas_query = db.session.query(ReservaLab.turma).filter_by(usuario_id=usuario.id).distinct().all()
+    lista_turmas = [t[0] for t in turmas_query if t[0]]
     
-    return render_template("ver_alunos_turmas.html", turmas=turmas, usuario_logado=usuario.login)
+    # 2. Se o professor escolheu uma turma, buscamos os alunos daquela turma
+    alunos_da_turma = []
+    if turma_selecionada:
+        alunos_da_turma = Usuario.query.filter_by(role='aluno', turma=turma_selecionada).all()
+    
+    return render_template("ver_alunos_turmas.html", 
+                           turmas=lista_turmas, 
+                           alunos=alunos_da_turma, 
+                           turma_ativa=turma_selecionada)
+
 
 @app.route("/logout")
 def logout():
