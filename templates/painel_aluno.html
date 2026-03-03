@@ -48,8 +48,8 @@
                             <tbody>
                                 {% for r in reservas %}
                                 <tr>
-                                    <td class="fw-bold text-primary">{{ r.data.strftime('%d/%m/%Y') }}</td>
-                                    <td><span class="badge bg-light text-dark border">{{ r.laboratorio.nome }}</span></td>
+                                    <td class="fw-bold text-primary">{{ r.data }}</td>
+                                    <td><span class="badge bg-light text-dark border">{{ r.lab.nome if r.lab else r.laboratorio_id }}</span></td>
                                     <td>{{ r.horario_inicio }} - {{ r.horario_fim }}</td>
                                     <td>{{ r.disciplina }}</td>
                                     <td class="text-muted small">{{ r.professor }}</td>

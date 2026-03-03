@@ -46,7 +46,8 @@ class ReservaLab(db.Model):
     horario_inicio = db.Column(db.String(5), nullable=False) # Ex: "19:30"
     horario_fim = db.Column(db.String(5), nullable=False)    # Ex: "21:30"
     
-    status = db.Column(db.String(20), default='pendente')
+    # Status padronizado (pending, pre_approved, approved, rejected, blocked)
+    status = db.Column(db.String(20), default='pending')
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'))
 
     # Relacionamentos para facilitar o uso no HTML
@@ -59,3 +60,6 @@ class BloqueioLab(db.Model):
     data_inicio = db.Column(db.Date, nullable=False)
     data_fim = db.Column(db.Date, nullable=False)
     motivo = db.Column(db.String(100), default="Período de Provas")
+
+    # Relacionamento com Laboratorio para uso em templates (b.lab_rel.nome)
+    lab_rel = db.relationship('Laboratorio', backref='bloqueios')

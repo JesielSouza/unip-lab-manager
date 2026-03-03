@@ -97,12 +97,9 @@
                                 <label class="form-label fw-bold small">Laboratório</label>
                                 <select name="laboratorio_id" id="labSelect" class="form-select" required onchange="handleLabChange()">
                                     <option value="" disabled selected>Escolher Lab...</option>
-                                    <option value="1">Lab 1</option>
-                                    <option value="2">Lab 2 / Provas Online</option>
-                                    <option value="3">Lab 3</option>
-                                    <option value="4">Lab 4</option>
-                                    <option value="8">Lab 8</option>
-                                    <option value="9">Lab 9 / Design de Moda</option>
+                                    {% for lab in laboratorios %}
+                                        <option value="{{ lab.id }}">{{ lab.nome }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
 
@@ -111,7 +108,7 @@
                                 <select name="turma_id" class="form-select" required>
                                     <option value="" disabled selected>Escolher Turma...</option>
                                     {% for t in turmas %}
-                                        <option value="{{ t.id }}">{{ t.sigla }} - {{ t.nome }}</option>
+                                        <option value="{{ t.id }}">{{ t.nome }} - {{ t.curso }} ({{ t.semestre }})</option>
                                     {% endfor %}
                                 </select>
                             </div>

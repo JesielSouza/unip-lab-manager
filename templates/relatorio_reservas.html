@@ -41,20 +41,19 @@
         </select>
       </div>
       <div class="col-md-2">
-        <label class="form-label">Período</label>
-        <select class="form-select" name="periodo">
-          <option value="">Todos</option>
-          {% for p in periodos %}
-          <option value="{{ p }}" {% if filtro_periodo == p %}selected{% endif %}>{{ p }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-2">
         <label class="form-label">Status</label>
         <select class="form-select" name="status">
           <option value="">Todos</option>
           {% for s in status_list %}
-          <option value="{{ s }}" {% if filtro_status == s %}selected{% endif %}>{{ s|capitalize }}</option>
+          <option value="{{ s }}" {% if filtro_status == s %}selected{% endif %}>
+            {% if s == 'pending' %}Pendente
+            {% elif s == 'pre_approved' %}Pré-aprovada
+            {% elif s == 'approved' %}Aprovada
+            {% elif s == 'rejected' %}Rejeitada
+            {% elif s == 'blocked' %}Bloqueio
+            {% else %}{{ s }}
+            {% endif %}
+          </option>
           {% endfor %}
         </select>
       </div>
@@ -73,26 +72,32 @@
             <th>Turma</th>
             <th>Disciplina</th>
             <th>Data</th>
-            <th>Período</th>
+            <th>Horário</th>
             <th>Status</th>
           </tr>
         </thead>
         <tbody>
           {% for r in reservas %}
           <tr>
-            <td>{{ r.laboratorio }}</td>
+            <td>{{ r.lab.nome if r.lab else r.laboratorio_id }}</td>
             <td>{{ r.professor }}</td>
-            <td>{{ r.turma }}</td>
+            <td>{{ r.turma_rel.nome if r.turma_rel else r.turma_id }}</td>
             <td>{{ r.disciplina }}</td>
             <td>{{ r.data }}</td>
-            <td>{{ r.periodo }}</td>
             <td>
-              {% if r.status == 'aprovado' %}
-                <span class="badge bg-success">Aprovado</span>
-              {% elif r.status == 'rejeitado' %}
-                <span class="badge bg-danger">Rejeitado</span>
+              {{ r.horario_inicio }} - {{ r.horario_fim }}
+            </td>
+            <td>
+              {% if r.status == 'approved' %}
+                <span class="badge bg-success">Aprovada</span>
+              {% elif r.status == 'rejected' %}
+                <span class="badge bg-danger">Rejeitada</span>
+              {% elif r.status == 'pre_approved' %}
+                <span class="badge bg-warning text-dark">Pré-aprovada</span>
+              {% elif r.status == 'blocked' %}
+                <span class="badge bg-danger">Bloqueio</span>
               {% else %}
-                <span class="badge bg-warning">Pendente</span>
+                <span class="badge bg-secondary">Pendente</span>
               {% endif %}
             </td>
           </tr>

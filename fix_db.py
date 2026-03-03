@@ -1,15 +1,37 @@
 from app import app, db, ReservaLab
 
+
+"""
+Script de normalização de status legado para o novo padrão interno:
+
+- 'aprovado'      -> 'approved'
+- 'rejeitado'     -> 'rejected'
+- 'pendente'/'Pendente' -> 'pending'
+- 'bloqueado'     -> 'blocked'
+"""
+
 with app.app_context():
-    # 1. Converte 'aprovado' para 'approved'
-    reservas_aprovadas = ReservaLab.query.filter_by(status='aprovado').all()
-    for r in reservas_aprovadas:
-        r.status = 'approved'
-    
-    # 2. Garante que 'pendente' está escrito corretamente (minúsculo)
-    reservas_pendentes = ReservaLab.query.filter_by(status='Pendente').all()
-    for r in reservas_pendentes:
-        r.status = 'pendente'
+    alteracoes = 0
+
+    # 1. Converte 'aprovado' -> 'approved'
+    for r in ReservaLab.query.filter_by(status="aprovado").all():
+        r.status = "approved"
+        alteracoes += 1
+
+    # 2. Converte 'rejeitado' -> 'rejected'
+    for r in ReservaLab.query.filter_by(status="rejeitado").all():
+        r.status = "rejected"
+        alteracoes += 1
+
+    # 3. Converte 'pendente' e 'Pendente' -> 'pending'
+    for r in ReservaLab.query.filter(ReservaLab.status.in_(["pendente", "Pendente"])).all():
+        r.status = "pending"
+        alteracoes += 1
+
+    # 4. Converte 'bloqueado' -> 'blocked'
+    for r in ReservaLab.query.filter_by(status="bloqueado").all():
+        r.status = "blocked"
+        alteracoes += 1
 
     db.session.commit()
-    print("✅ Banco de dados sincronizado com o novo layout!")
+    print(f"✅ Banco sincronizado. Registros atualizados: {alteracoes}")

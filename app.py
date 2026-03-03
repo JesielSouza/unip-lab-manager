@@ -78,37 +78,35 @@ def relatorio_reservas():
     # Filtros
     turma = request.form.get("turma") if request.method == "POST" else None
     disciplina = request.form.get("disciplina") if request.method == "POST" else None
-    periodo = request.form.get("periodo") if request.method == "POST" else None
     status = request.form.get("status") if request.method == "POST" else None
 
     query = ReservaLab.query
     if turma:
-        query = query.filter(ReservaLab.turma.ilike(f"%{turma}%"))
+        # Filtra pelo nome da turma associada
+        query = query.join(ReservaLab.turma_rel).filter(Turma.nome.ilike(f"%{turma}%"))
     if disciplina:
         query = query.filter(ReservaLab.disciplina.ilike(f"%{disciplina}%"))
-    if periodo:
-        query = query.filter(ReservaLab.periodo == periodo)
     if status:
         query = query.filter(ReservaLab.status == status)
 
     reservas = query.order_by(ReservaLab.data.desc()).all()
 
     # Para popular selects
-    turmas = [t[0] for t in db.session.query(ReservaLab.turma).distinct().all() if t[0]]
+    turmas = [t[0] for t in db.session.query(Turma.nome).join(ReservaLab, Turma.id == ReservaLab.turma_id).distinct().all() if t[0]]
     disciplinas = [d[0] for d in db.session.query(ReservaLab.disciplina).distinct().all() if d[0]]
-    periodos = [p[0] for p in db.session.query(ReservaLab.periodo).distinct().all() if p[0]]
-    status_list = ["pendente", "aprovado", "rejeitado"]
+    # Período antigo removido – agora usamos horário início/fim
+    periodos = []
+    # Status internos padronizados
+    status_list = ["pending", "pre_approved", "approved", "rejected", "blocked"]
 
     return render_template(
         "relatorio_reservas.html",
         reservas=reservas,
         turmas=turmas,
         disciplinas=disciplinas,
-        periodos=periodos,
         status_list=status_list,
         filtro_turma=turma or "",
         filtro_disciplina=disciplina or "",
-        filtro_periodo=periodo or "",
         filtro_status=status or "",
         usuario_id=usuario.id,
         usuario_logado=usuario.login
@@ -159,74 +157,80 @@ def login():
     return render_template("login.html")
 
 # Rota unificada de cadastro
-@app.route("/cadastro", methods=["GET", "POST"])
+@app.route('/cadastro', methods=['GET', 'POST'])
 def cadastro():
-    if request.method == "POST":
-        login = request.form["login"]
-        email = request.form["email"]
-        senha = request.form["senha"]
-        role = request.form.get("role", "aluno")
+    if request.method == 'POST':
+        role = request.form.get("role")
+        login = request.form.get("login") # RA para alunos, ID para colab
+        email = request.form.get("email")
+        senha = request.form.get("senha")
         
-        turma_id_vinculo = None # Variável para armazenar o ID da tabela Turma
-        semestre = None
-        cargo = None
+        # 1. Verificar se o usuário já existe para evitar erros de banco
+        if Usuario.query.filter_by(login=login).first():
+            flash("Este RA/ID já está cadastrado!", "danger")
+            return redirect(url_for("cadastro"))
 
-        # Dentro da rota /cadastro, na parte do aluno:
-        if role == "aluno":
-            nome_turma = request.form.get("turma")
-            semestre_valor = request.form.get("semestre") # Pegando o valor do select do formulário
-            
-            if nome_turma:
-                turma_obj = Turma.query.filter_by(nome=nome_turma).first()
-                if not turma_obj:
-                    # Aqui garantimos que o semestre não vá vazio para o banco
-                    turma_obj = Turma(
-                        nome=nome_turma, 
-                        curso=nome_turma[:2], 
-                        semestre=int(semestre_valor) if semestre_valor else 1 
-                    )
-                    db.session.add(turma_obj)
-                    db.session.commit()
-                else:
-                    cargo = request.form.get("cargo")
+        # 2. Criptografia da senha seguindo o seu padrão bcrypt
+        senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-        # Validação de existência de usuário
-        usuario_existente = Usuario.query.filter((Usuario.login == login) | (Usuario.email == email)).first()
-        if usuario_existente:
-            return "⚠️ RA/ID ou E-mail já cadastrado", 400
-        
-        senha_hash = bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
-        
-        # Criação do novo usuário
+        # 3. Criação do Usuário Base
         novo_usuario = Usuario(
-            login=login, 
-            email=email, 
+            login=login,
+            email=email,
             senha_hash=senha_hash,
             role=role,
-            # Se o seu modelo Usuario usa 'turma_id' como chave estrangeira:
-            turma_id=turma_id_vinculo, 
-            # Se você ainda quiser manter a string original por segurança:
-            turma=request.form.get("turma") if role == "aluno" else None,
-            semestre=semestre,
-            cargo=cargo
+            ativo=True
         )
 
+        # 4. Lógica Inteligente de Turmas (Exclusivo para Alunos)
+        if role == 'aluno':
+            sigla_turma = request.form.get("turma")
+            cod_curso = request.form.get("curso") # Pega "ADS", "CC", etc.
+            semestre_val = request.form.get("semestre")
+
+            # Mapeamento para o nome não ir como sigla para o banco
+            cursos_nomes = {
+                "ADS": "Análise e Desenvolvimento de Sistemas",
+                "CC": "Ciência da Computação",
+                "DIR": "Direito"
+            }
+            curso_completo = cursos_nomes.get(cod_curso, cod_curso)
+
+            turma_existente = Turma.query.filter_by(nome=sigla_turma).first()
+            
+            if not turma_existente:
+                turma_existente = Turma(
+                    nome=sigla_turma, 
+                    curso=curso_completo, # Agora vai o nome cheio!
+                    semestre=f"{semestre_val}º Semestre"
+                )
+                db.session.add(turma_existente)
+                db.session.flush()
+
+            novo_usuario.turma_id = turma_existente.id
+            novo_usuario.turma = sigla_turma
+            novo_usuario.semestre = semestre_val
+
+        else:
+            # Lógica para Professor/Coordenador
+            cargo = request.form.get("cargo")
+            novo_usuario.cargo = cargo
+            # Ajusta a role específica baseada no cargo selecionado
+            if cargo in ['professor', 'coordenador']:
+                novo_usuario.role = cargo
+
+        # 5. Salva tudo no banco
         try:
             db.session.add(novo_usuario)
             db.session.commit()
-            
-            if "usuario" not in session:
-                session["usuario"] = login
-                session["role"] = role
-                return redirect(url_for("painel_unip"))
-            else:
-                return redirect(url_for("admin_usuarios"))
-                
+            flash("Cadastro realizado com sucesso! Faça login para continuar.", "success")
+            return redirect(url_for("login"))
         except Exception as e:
             db.session.rollback()
-            return f"❌ Erro ao salvar no banco: {str(e)}", 500
+            flash(f"Erro ao salvar no banco: {str(e)}", "danger")
 
-    return render_template("cadastro.html")
+    return render_template('cadastro.html')
+
 
 @app.route("/processa_cadastro_aluno", methods=["POST"])
 def cadastrar_aluno():
@@ -255,16 +259,17 @@ def cadastrar_aluno():
 @app.route("/api/eventos")
 def api_eventos():
     # Buscamos todas as reservas que não foram rejeitadas
-    reservas = ReservaLab.query.filter(ReservaLab.status != 'rejeitado').all()
+    reservas = ReservaLab.query.filter(ReservaLab.status != 'rejected').all()
     eventos = []
     
     for r in reservas:
         # Definimos a cor baseada no status ou se é um bloqueio
-        cor = "#003366" # Azul UNIP (Aprovado)
-        if r.status == 'pendente':
-            cor = "#ffc107" # Amarelo (Aguardando)
-        if "MANUTENÇÃO" in r.disciplina.upper() or r.status == 'bloqueado':
-            cor = "#dc3545" # Vermelho (Bloqueio Admin)
+        # approved -> azul, pending / pre_approved -> amarelo, blocked / manutenção -> vermelho
+        cor = "#003366"  # Azul UNIP (Aprovado)
+        if r.status in ['pending', 'pre_approved']:
+            cor = "#ffc107"  # Amarelo (Aguardando)
+        if "MANUTENÇÃO" in (r.disciplina or "").upper() or r.status == 'blocked':
+            cor = "#dc3545"  # Vermelho (Bloqueio Admin)
 
         eventos.append({
             "id": r.id,
@@ -329,13 +334,14 @@ def nova_reserva():
 
         # Salvar Reserva
         nova = ReservaLab(
-            data=data_selecionada,
+            data=data_selecionada.strftime('%Y-%m-%d'),
             laboratorio_id=lab_id,
             turma_id=turma_id,
             horario_inicio=h_inicio,
             horario_fim=h_fim,
             disciplina=disciplina,
-            professor=prof_responsavel
+            professor=prof_responsavel,
+            status='pending'
         )
         db.session.add(nova)
         db.session.commit()
@@ -364,47 +370,79 @@ def editar(id):
     usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
 
     if request.method == "POST":
-        # 1. Captura os novos dados do formulário
-        laboratorio = request.form.get("laboratorio")
-        data = request.form.get("data")
-        periodo = request.form.get("periodo")
-        turma = request.form.get("turma")
+        # 1. Captura os novos dados do formulário (reaproveita campos de nova_reserva)
+        data_str = request.form.get("data")
+        lab_id = int(request.form.get("laboratorio_id"))
+        turma_id = int(request.form.get("turma_id"))
+        h_inicio = request.form.get("horario_inicio")
+        h_fim = request.form.get("horario_fim")
         disciplina = request.form.get("disciplina")
 
         # 2. VALIDAÇÃO DE CONFLITO (Ignorando a própria reserva que está a ser editada)
+        data_selecionada = datetime.strptime(data_str, "%Y-%m-%d").date()
         conflito = ReservaLab.query.filter(
             ReservaLab.id != id,
-            ReservaLab.laboratorio == laboratorio,
-            ReservaLab.data == data,
-            ReservaLab.periodo == periodo,
-            ReservaLab.status != 'rejeitado' # Ignora se o conflito for com uma já rejeitada
+            ReservaLab.laboratorio_id == lab_id,
+            ReservaLab.data == data_str,
+            ReservaLab.horario_inicio < h_fim,
+            ReservaLab.horario_fim > h_inicio,
+            ReservaLab.status != "rejected",  # Ignora se o conflito for com uma já rejeitada
         ).first()
 
         if conflito:
-            flash(f"Erro: O {laboratorio} já está ocupado nesta nova data/período.", "danger")
-            return render_template("nova_reserva.html", reserva=reserva, usuario=usuario_logado)
+            flash(
+                f"Erro: O laboratório {conflito.lab.nome if conflito.lab else lab_id} já está ocupado nesta data/horário.",
+                "danger",
+            )
+            # Recarrega dados auxiliares para o formulário
+            laboratorios = Laboratorio.query.all()
+            turmas = Turma.query.all()
+            todos_professores = Usuario.query.filter(Usuario.role.in_(["professor", "coordenador"])).all()
+            horarios_unip = ["19:10", "20:00", "20:50", "21:00", "21:50", "22:40"]
+            return render_template(
+                "nova_reserva.html",
+                reserva=reserva,
+                usuario=usuario_logado,
+                laboratorios=laboratorios,
+                turmas=turmas,
+                horarios=horarios_unip,
+                todos_professores=todos_professores,
+            )
 
         # 3. ATUALIZAÇÃO DOS DADOS
-        reserva.laboratorio = laboratorio
-        reserva.data = data
-        reserva.periodo = periodo
-        reserva.turma = turma
+        reserva.data = data_str
+        reserva.laboratorio_id = lab_id
+        reserva.turma_id = turma_id
+        reserva.horario_inicio = h_inicio
+        reserva.horario_fim = h_fim
         reserva.disciplina = disciplina
 
         # 4. LÓGICA DE STATUS NA EDIÇÃO
-        # Se um professor editar, a reserva volta a ficar 'pendente' para nova análise
-        if usuario_logado.role == 'professor':
-            reserva.status = 'pendente'
-        # Se um admin editar, podemos manter como 'approved'
-        elif usuario_logado.role == 'admin':
-            reserva.status = 'approved'
+        # Se um professor editar, a reserva volta a ficar pendente para nova análise
+        if usuario_logado.role == "professor":
+            reserva.status = "pending"
+        # Se um admin editar, mantemos como approved
+        elif usuario_logado.role == "admin":
+            reserva.status = "approved"
 
         db.session.commit()
         flash("Reserva atualizada com sucesso!", "success")
         return redirect(url_for("painel_unip"))
 
-    # No GET: Abre o formulário com os dados atuais
-    return render_template("nova_reserva.html", reserva=reserva, usuario=usuario_logado)
+    # No GET: Abre o formulário com os dados atuais, incluindo selects
+    laboratorios = Laboratorio.query.all()
+    turmas = Turma.query.all()
+    todos_professores = Usuario.query.filter(Usuario.role.in_(["professor", "coordenador"])).all()
+    horarios_unip = ["19:10", "20:00", "20:50", "21:00", "21:50", "22:40"]
+    return render_template(
+        "nova_reserva.html",
+        reserva=reserva,
+        usuario=usuario_logado,
+        laboratorios=laboratorios,
+        turmas=turmas,
+        horarios=horarios_unip,
+        todos_professores=todos_professores,
+    )
 
 @app.route("/excluir/<int:id>")
 def excluir(id):
@@ -536,7 +574,8 @@ def excluir_usuario(id):
         db.session.delete(user)
         db.session.commit()
     
-    return redirect(url_for("admin_usuarios"))
+    # Após exclusão, mantém o admin no painel principal (aba Usuários)
+    return redirect(url_for("painel_unip"))
 
 @app.route("/admin/perfil", methods=["GET", "POST"])
 def admin_perfil():
@@ -666,7 +705,7 @@ def coordenador_reservas():
     if usuario.role not in ['coordenador', 'admin']:
         return "Acesso negado", 403
     
-    reservas_pendentes = ReservaLab.query.filter_by(status='pendente').all()
+    reservas_pendentes = ReservaLab.query.filter_by(status='pending').all()
     todas_reservas = ReservaLab.query.all()
     
     return render_template("coordenador_reservas.html", reservas_pendentes=reservas_pendentes, todas_reservas=todas_reservas, usuario_logado=usuario.login)
@@ -686,7 +725,7 @@ def aprovar_reserva(id):
     
     reserva = ReservaLab.query.get(id)
     if reserva:
-        reserva.status = 'aprovado'
+        reserva.status = 'approved'
         db.session.commit()
     
     return redirect(url_for("coordenador_reservas"))
@@ -706,7 +745,7 @@ def rejeitar_reserva(id):
     
     reserva = ReservaLab.query.get(id)
     if reserva:
-        reserva.status = 'rejeitado'
+        reserva.status = 'rejected'
         db.session.commit()
     
     return redirect(url_for("coordenador_reservas"))
@@ -721,8 +760,14 @@ def ver_alunos_turmas(turma_selecionada=None):
     if usuario.role != 'professor':
         return "Acesso negado", 403
     
-    # 1. Busca as turmas onde o professor tem reservas confirmadas ou pendentes
-    turmas_query = db.session.query(ReservaLab.turma).filter_by(usuario_id=usuario.id).distinct().all()
+    # 1. Busca as turmas onde o professor tem reservas (via relacionamento com Turma)
+    turmas_query = (
+        db.session.query(Turma.nome)
+        .join(ReservaLab, Turma.id == ReservaLab.turma_id)
+        .filter(ReservaLab.usuario_id == usuario.id)
+        .distinct()
+        .all()
+    )
     lista_turmas = [t[0] for t in turmas_query if t[0]]
     
     # 2. Se o professor escolheu uma turma, buscamos os alunos daquela turma
@@ -752,8 +797,11 @@ def painel_unip():
     # --- VISÃO DO ALUNO ---
     if usuario_logado.role == 'aluno':
         # Filtramos as reservas para mostrar apenas o que é da turma do aluno
-        # Assumindo que o Aluno tem o campo 'turma_id' no seu modelo
-        reservas_turma = [r for r in reservas if r.turma_id == usuario_logado.turma_id]
+        # e que já estejam aprovadas (status final)
+        reservas_turma = [
+            r for r in reservas
+            if r.turma_id == usuario_logado.turma_id and r.status == 'approved'
+        ]
         
         return render_template("painel_aluno.html", 
                                usuario=usuario_logado.login,

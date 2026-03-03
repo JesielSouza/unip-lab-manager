@@ -69,7 +69,7 @@ body {
     color: var(--unip-gold);
 }
 /* Cores laterais dos cards baseadas no status */
-.status-border-pendente { border-left: 6px solid #6c757d !important; }
+.status-border-pendente { border-left: 6px solid #6c757d !important; } /* compat legado */
 .status-border-pre_approved { border-left: 6px solid #ffc107 !important; }
 .status-border-approved { border-left: 6px solid #198754 !important; }
 .status-border-blocked { border-left: 6px solid #dc3545 !important; }
