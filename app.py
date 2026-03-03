@@ -21,38 +21,47 @@ from models import db, Usuario
 db.init_app(app)
 
 def inicializar_unidade():
-    # 1. Definição da lista "Sagrada" (O que deve existir)
+    # --- PARTE 1: LABORATÓRIOS ---
     labs_predefinidos = [
         {"nome": "Laboratório 1", "capacidade": 25},
-        {"nome": "Laboratório 2/Provas Online", "capacidade": 25},
+        {"nome": "Laboratório 2", "capacidade": 25},
         {"nome": "Laboratório 8", "capacidade": 25},
-        {"nome": "Laboratório 9/Design de Moda", "capacidade": 26},
+        {"nome": "Laboratório 9", "capacidade": 26},
         {"nome": "Laboratório Elétrica 2", "capacidade": 9},
         {"nome": "Laboratório Elétrica 3", "capacidade": 18}
     ]
     
     nomes_oficiais = [l["nome"] for l in labs_predefinidos]
 
-    # 2. LIMPEZA AUTOMÁTICA: 
-    # Deleta qualquer laboratório cujo nome NÃO esteja na lista oficial.
-    # Isso remove "Laboratório 9/Design de Moda" e outras variações sozinho.
+    # Limpa nomes que não deveriam estar lá (duplicatas)
     Laboratorio.query.filter(~Laboratorio.nome.in_(nomes_oficiais)).delete(synchronize_session=False)
 
-    # 3. ATUALIZAÇÃO/CRIAÇÃO:
     for lab_data in labs_predefinidos:
         lab = Laboratorio.query.filter_by(nome=lab_data["nome"]).first()
-        
         if lab:
-            # Se já existe, apenas garante que a capacidade é a do código
             if lab.capacidade != lab_data["capacidade"]:
                 lab.capacidade = lab_data["capacidade"]
         else:
-            # Se não existe, cria
-            novo_lab = Laboratorio(nome=lab_data["nome"], capacidade=lab_data["capacidade"])
-            db.session.add(novo_lab)
-            
+            db.session.add(Laboratorio(nome=lab_data["nome"], capacidade=lab_data["capacidade"]))
+
+    # --- PARTE 2: ADMINISTRADOR (Baseado no seu create_admin.py) ---
+    if not Usuario.query.filter_by(login="admin").first():
+        # Usando a lógica do seu arquivo create_admin.py
+        senha_hash = bcrypt.hashpw("admin123".encode(), bcrypt.gensalt()).decode()
+        admin = Usuario(
+            login="admin",
+            email="admin@unip.br",
+            senha_hash=senha_hash,
+            role="admin",
+            turma=None,
+            semestre=None,
+            cargo="administrador"
+        )
+        db.session.add(admin)
+        print("✅ Admin padrão criado!")
+
     db.session.commit()
-    print("Sincronização concluída: Painel limpo e atualizado.")
+    print("🚀 Sistema inicializado com sucesso!")
 
 # Rota de relatório/filtro para coordenador e admin
 @app.route("/relatorio_reservas", methods=["GET", "POST"])
@@ -162,23 +171,24 @@ def cadastro():
         semestre = None
         cargo = None
 
+        # Dentro da rota /cadastro, na parte do aluno:
         if role == "aluno":
-            # 1. Captura a sigla (ex: DS3P34) vinda do seu JS
-            nome_turma = request.form.get("turma") 
-            semestre = request.form.get("semestre")
+            nome_turma = request.form.get("turma")
+            semestre_valor = request.form.get("semestre") # Pegando o valor do select do formulário
             
             if nome_turma:
-                # 2. LÓGICA AUTOMÁTICA: Busca ou Cria a Turma no Banco
-                turma_objeto = Turma.query.filter_by(nome=nome_turma).first()
-                if not turma_objeto:
-                    # Se a turma (sigla) ainda não existe na tabela Turma, criamos agora
-                    turma_objeto = Turma(nome=nome_turma, curso=nome_turma[:2]) # Pega as primeiras letras como curso
-                    db.session.add(turma_objeto)
-                    db.session.commit() # Commit para gerar o ID
-                
-                turma_id_vinculo = turma_objeto.id
-        else:
-            cargo = request.form.get("cargo")
+                turma_obj = Turma.query.filter_by(nome=nome_turma).first()
+                if not turma_obj:
+                    # Aqui garantimos que o semestre não vá vazio para o banco
+                    turma_obj = Turma(
+                        nome=nome_turma, 
+                        curso=nome_turma[:2], 
+                        semestre=int(semestre_valor) if semestre_valor else 1 
+                    )
+                    db.session.add(turma_obj)
+                    db.session.commit()
+                else:
+                    cargo = request.form.get("cargo")
 
         # Validação de existência de usuário
         usuario_existente = Usuario.query.filter((Usuario.login == login) | (Usuario.email == email)).first()
