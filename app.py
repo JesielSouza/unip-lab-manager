@@ -1,6 +1,7 @@
 from sqlalchemy import or_
-from models import ReservaLab, db, Usuario
+from models import ReservaLab, db, Usuario, Laboratorio, Turma, BloqueioLab
 from flask import Flask, jsonify, render_template, request, redirect, session, url_for, flash
+from datetime import datetime
 import json, os
 import bcrypt
 from flask_migrate import Migrate
@@ -18,6 +19,40 @@ migrate = Migrate(app, db)
 # Inicia o banco com o app
 from models import db, Usuario
 db.init_app(app)
+
+def inicializar_unidade():
+    # 1. Definição da lista "Sagrada" (O que deve existir)
+    labs_predefinidos = [
+        {"nome": "Laboratório 1", "capacidade": 25},
+        {"nome": "Laboratório 2/Provas Online", "capacidade": 25},
+        {"nome": "Laboratório 8", "capacidade": 25},
+        {"nome": "Laboratório 9/Design de Moda", "capacidade": 26},
+        {"nome": "Laboratório Elétrica 2", "capacidade": 9},
+        {"nome": "Laboratório Elétrica 3", "capacidade": 18}
+    ]
+    
+    nomes_oficiais = [l["nome"] for l in labs_predefinidos]
+
+    # 2. LIMPEZA AUTOMÁTICA: 
+    # Deleta qualquer laboratório cujo nome NÃO esteja na lista oficial.
+    # Isso remove "Laboratório 9/Design de Moda" e outras variações sozinho.
+    Laboratorio.query.filter(~Laboratorio.nome.in_(nomes_oficiais)).delete(synchronize_session=False)
+
+    # 3. ATUALIZAÇÃO/CRIAÇÃO:
+    for lab_data in labs_predefinidos:
+        lab = Laboratorio.query.filter_by(nome=lab_data["nome"]).first()
+        
+        if lab:
+            # Se já existe, apenas garante que a capacidade é a do código
+            if lab.capacidade != lab_data["capacidade"]:
+                lab.capacidade = lab_data["capacidade"]
+        else:
+            # Se não existe, cria
+            novo_lab = Laboratorio(nome=lab_data["nome"], capacidade=lab_data["capacidade"])
+            db.session.add(novo_lab)
+            
+    db.session.commit()
+    print("Sincronização concluída: Painel limpo e atualizado.")
 
 # Rota de relatório/filtro para coordenador e admin
 @app.route("/relatorio_reservas", methods=["GET", "POST"])
@@ -66,6 +101,7 @@ def relatorio_reservas():
         filtro_disciplina=disciplina or "",
         filtro_periodo=periodo or "",
         filtro_status=status or "",
+        usuario_id=usuario.id,
         usuario_logado=usuario.login
     )
 
@@ -93,17 +129,24 @@ def index():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        login = request.form["login"]
-        senha = request.form["senha"]
-        usuario = Usuario.query.filter_by(login=login).first()
+        login_form = request.form["login"]
+        senha_form = request.form["senha"]
+        
+        usuario = Usuario.query.filter_by(login=login_form).first()
+        
         if not usuario:
-            return "Usuário não encontrado", 404
+            # Em vez de 404, podemos usar o flash para ficar mais bonito na tela
+            flash("Usuário não encontrado", "danger")
+            return render_template("login.html")
 
-        if bcrypt.checkpw(senha.encode(), usuario.senha_hash.encode()):
+        if bcrypt.checkpw(senha_form.encode(), usuario.senha_hash.encode()):
+            session.clear() # Limpa resquícios de sessões antigas/inválidas
             session["usuario"] = usuario.login
             return redirect("/painel_unip")
         else:
-            return "Senha Incorreta", 401
+            flash("Senha Incorreta", "danger")
+            return render_template("login.html")
+            
     return render_template("login.html")
 
 # Rota unificada de cadastro
@@ -113,38 +156,91 @@ def cadastro():
         login = request.form["login"]
         email = request.form["email"]
         senha = request.form["senha"]
-        role = request.form.get("role", "aluno")  # Default to aluno
-        turma = request.form.get("turma")
-        semestre = request.form.get("semestre")
-
-        usuario_existente = Usuario.query.filter_by(login=login).first()
-        if usuario_existente:
-            return "⚠️ Usuário já existe", 400
+        role = request.form.get("role", "aluno")
         
-        # Gerando o Hash da senha
+        turma_id_vinculo = None # Variável para armazenar o ID da tabela Turma
+        semestre = None
+        cargo = None
+
+        if role == "aluno":
+            # 1. Captura a sigla (ex: DS3P34) vinda do seu JS
+            nome_turma = request.form.get("turma") 
+            semestre = request.form.get("semestre")
+            
+            if nome_turma:
+                # 2. LÓGICA AUTOMÁTICA: Busca ou Cria a Turma no Banco
+                turma_objeto = Turma.query.filter_by(nome=nome_turma).first()
+                if not turma_objeto:
+                    # Se a turma (sigla) ainda não existe na tabela Turma, criamos agora
+                    turma_objeto = Turma(nome=nome_turma, curso=nome_turma[:2]) # Pega as primeiras letras como curso
+                    db.session.add(turma_objeto)
+                    db.session.commit() # Commit para gerar o ID
+                
+                turma_id_vinculo = turma_objeto.id
+        else:
+            cargo = request.form.get("cargo")
+
+        # Validação de existência de usuário
+        usuario_existente = Usuario.query.filter((Usuario.login == login) | (Usuario.email == email)).first()
+        if usuario_existente:
+            return "⚠️ RA/ID ou E-mail já cadastrado", 400
+        
         senha_hash = bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
         
+        # Criação do novo usuário
         novo_usuario = Usuario(
             login=login, 
             email=email, 
             senha_hash=senha_hash,
             role=role,
-            turma=turma,
-            semestre=semestre
+            # Se o seu modelo Usuario usa 'turma_id' como chave estrangeira:
+            turma_id=turma_id_vinculo, 
+            # Se você ainda quiser manter a string original por segurança:
+            turma=request.form.get("turma") if role == "aluno" else None,
+            semestre=semestre,
+            cargo=cargo
         )
 
-        db.session.add(novo_usuario)
-        db.session.commit()
+        try:
+            db.session.add(novo_usuario)
+            db.session.commit()
+            
+            if "usuario" not in session:
+                session["usuario"] = login
+                session["role"] = role
+                return redirect(url_for("painel_unip"))
+            else:
+                return redirect(url_for("admin_usuarios"))
+                
+        except Exception as e:
+            db.session.rollback()
+            return f"❌ Erro ao salvar no banco: {str(e)}", 500
 
-        # Só loga automaticamente se não estiver autenticado (ou seja, não é admin criando)
-        if "usuario" not in session:
-            session["usuario"] = login
-            return redirect(url_for("painel_unip"))
-        else:
-            # Se for admin criando, volta para a lista de usuários
-            return redirect(url_for("admin_usuarios"))
-    # Se for GET (acesso normal), exibe a página
     return render_template("cadastro.html")
+
+@app.route("/processa_cadastro_aluno", methods=["POST"])
+def cadastrar_aluno():
+    # ... captura dados do formulário (nome, login, curso, periodo) ...
+    curso_aluno = request.form.get('curso')
+    periodo_aluno = request.form.get('periodo')
+    nome_turma = f"{curso_aluno} - {periodo_aluno}"
+
+    # Tenta achar a turma. Se não existir, cria.
+    turma = Turma.query.filter_by(nome=nome_turma).first()
+    if not turma:
+        turma = Turma(nome=nome_turma, curso=curso_aluno)
+        db.session.add(turma)
+        db.session.commit() # Commit para gerar o ID da turma
+
+    # Agora vincula o aluno à turma encontrada ou criada
+    novo_usuario = Usuario(
+        login=login,
+        role='aluno',
+        turma_id=turma.id, # Vinculo automático
+        # ... outros campos ...
+    )
+    db.session.add(novo_usuario)
+    db.session.commit()
 
 @app.route("/api/eventos")
 def api_eventos():
@@ -179,110 +275,125 @@ def nova_reserva():
     if "usuario" not in session:
         return redirect("/login")
     
-    # Busca o usuário para saber o Role (Admin, Coordenador ou Professor)
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+
+    # TRAVA 1: Segurança de acesso (Anti-aluno)
+    if usuario_logado.role == 'aluno':
+        return redirect(url_for('painel_unip'))
+
+    if request.method == "POST":
+        data_str = request.form.get('data')
+        lab_id = int(request.form.get('laboratorio_id'))
+        turma_id = int(request.form.get('turma_id'))
+        h_inicio = request.form.get('horario_inicio')
+        h_fim = request.form.get('horario_fim')
+        disciplina = request.form.get('disciplina')
+        # Admin/Coord podem escolher o prof, Professor usa o próprio login
+        prof_responsavel = request.form.get('professor') if usuario_logado.role in ['admin', 'coordenador'] else usuario_logado.login
+        
+        # 1. Validar Data
+        data_selecionada = datetime.strptime(data_str, '%Y-%m-%d').date()
+
+        # TRAVA 2: Período de Provas (Bloqueio do Lab 2)
+        bloqueio = BloqueioLab.query.filter(
+            BloqueioLab.laboratorio_id == lab_id,
+            BloqueioLab.data_inicio <= data_selecionada,
+            BloqueioLab.data_fim >= data_selecionada
+        ).first()
+
+        if bloqueio:
+            flash(f"Impossível reservar: {bloqueio.motivo} ativo para o Lab {lab_id}", "danger")
+            return redirect(url_for('nova_reserva'))
+
+        # TRAVA 3: Conflito de Horário (Já existe reserva no lab nesse horário?)
+        conflito = ReservaLab.query.filter(
+            ReservaLab.laboratorio_id == lab_id,
+            ReservaLab.data == data_selecionada,
+            ReservaLab.horario_inicio < h_fim,
+            ReservaLab.horario_fim > h_inicio
+        ).first()
+
+        if conflito:
+            flash(f"Conflito: O Lab {lab_id} já está reservado por {conflito.professor} nesse horário.", "warning")
+            return redirect(url_for('nova_reserva'))
+
+        # Salvar Reserva
+        nova = ReservaLab(
+            data=data_selecionada,
+            laboratorio_id=lab_id,
+            turma_id=turma_id,
+            horario_inicio=h_inicio,
+            horario_fim=h_fim,
+            disciplina=disciplina,
+            professor=prof_responsavel
+        )
+        db.session.add(nova)
+        db.session.commit()
+        flash("Reserva realizada com sucesso!", "success")
+        return redirect(url_for('painel_unip'))
+
+    # Dados para carregar os selects do HTML
+    laboratorios = Laboratorio.query.all()
+    turmas = Turma.query.all()
+    todos_professores = Usuario.query.filter(Usuario.role.in_(["professor", "coordenador"])).all()
+    horarios_unip = ["19:10", "20:00", "20:50", "21:00", "21:50", "22:40"]
+
+    return render_template("nova_reserva.html", 
+                           laboratorios=laboratorios, 
+                           turmas=turmas, 
+                           usuario=usuario_logado, 
+                           horarios=horarios_unip,
+                           todos_professores=todos_professores)
+
+@app.route("/editar/<int:id>", methods=["GET", "POST"])
+def editar(id):
+    if "usuario" not in session:
+        return redirect("/login")
+    
+    reserva = ReservaLab.query.get_or_404(id)
     usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
 
     if request.method == "POST":
+        # 1. Captura os novos dados do formulário
         laboratorio = request.form.get("laboratorio")
         data = request.form.get("data")
         periodo = request.form.get("periodo")
         turma = request.form.get("turma")
         disciplina = request.form.get("disciplina")
 
-        # 1. VALIDAÇÃO DE CONFLITO (Cruzamento de dados)
-        conflito = ReservaLab.query.filter_by(
-            laboratorio=laboratorio,
-            data=data,
-            periodo=periodo
+        # 2. VALIDAÇÃO DE CONFLITO (Ignorando a própria reserva que está a ser editada)
+        conflito = ReservaLab.query.filter(
+            ReservaLab.id != id,
+            ReservaLab.laboratorio == laboratorio,
+            ReservaLab.data == data,
+            ReservaLab.periodo == periodo,
+            ReservaLab.status != 'rejeitado' # Ignora se o conflito for com uma já rejeitada
         ).first()
 
         if conflito:
-            return render_template("nova_reserva.html", 
-                                 erro=f"Atenção: O {laboratorio} já está ocupado em {data} ({periodo}).", 
-                                 usuario=usuario_logado, # Corrigido para bater com o template
-                                 reserva=None)
+            flash(f"Erro: O {laboratorio} já está ocupado nesta nova data/período.", "danger")
+            return render_template("nova_reserva.html", reserva=reserva, usuario=usuario_logado)
 
-        # 2. DIFERENCIAÇÃO DE STATUS (Admin já nasce aprovado)
-        status_inicial = 'pendente'
-        if usuario_logado.role == 'admin':
-            status_inicial = 'aprovado' # Ou 'confirmado', como preferir chamar
+        # 3. ATUALIZAÇÃO DOS DADOS
+        reserva.laboratorio = laboratorio
+        reserva.data = data
+        reserva.periodo = periodo
+        reserva.turma = turma
+        reserva.disciplina = disciplina
 
-        # 3. CRIAÇÃO DA RESERVA
-        nova = ReservaLab(
-            laboratorio=laboratorio,
-            professor=usuario_logado.login,
-            turma=turma,
-            disciplina=disciplina,
-            data=data,
-            periodo=periodo,
-            usuario_id=usuario_logado.id,
-            status=status_inicial
-        )
-        
-        db.session.add(nova)
-        db.session.commit()
-        
-        flash("Reserva solicitada com sucesso!", "success")
-        return redirect("/painel_unip")
-
-    return render_template("nova_reserva.html", reserva=None, usuario=usuario_logado)
-
-@app.route("/painel_unip")
-def painel_unip():
-    if "usuario" not in session:
-        return redirect("/login")
-
-    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario:
-        session.clear()
-        return redirect("/login")
-
-    if usuario.role == 'aluno':
-        # Alunos veem apenas suas reservas aprovadas da sua turma
-        reservas = ReservaLab.query.filter_by(status='aprovado', turma=usuario.turma).all()
-    elif usuario.role == 'professor':
-        # Professores veem suas próprias reservas
-        reservas = ReservaLab.query.filter_by(usuario_id=usuario.id).all()
-    else:  # coordenador ou admin
-        # Veem todas as reservas
-        reservas = ReservaLab.query.all()
-
-    return render_template("lista.html", reservas=reservas, usuario=usuario.login, role=usuario.role, usuario_id=usuario.id)
-
-@app.route("/editar/<int:id>", methods=["GET", "POST"])
-def editar_reserva(id):
-    if "usuario" not in session:
-        return redirect(url_for("login"))
-    
-    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario_logado:
-        session.clear()
-        return redirect("/login")
-    
-    reserva = ReservaLab.query.get_or_404(id)
-    
-    # Verificar permissões: coordenadores/admin podem editar qualquer, professores apenas suas
-    if usuario_logado.role not in ['coordenador', 'admin'] and reserva.usuario_id != usuario_logado.id:
-        return "Acesso negado", 403
-    
-    if request.method == "POST":
-        reserva.laboratorio = request.form["laboratorio"]
-        # Preencher professor conforme perfil
+        # 4. LÓGICA DE STATUS NA EDIÇÃO
+        # Se um professor editar, a reserva volta a ficar 'pendente' para nova análise
         if usuario_logado.role == 'professor':
-            reserva.professor = usuario_logado.login
-            # Sempre que o professor editar, volta para pendente
             reserva.status = 'pendente'
-        else:
-            reserva.professor = request.form.get("professor", reserva.professor)
-            # Coordenador/admin mantém status atual
-        reserva.turma = request.form["turma"]
-        reserva.disciplina = request.form["disciplina"]
-        reserva.data = request.form["data"]
-        reserva.periodo = request.form["periodo"]
+        # Se um admin editar, podemos manter como 'approved'
+        elif usuario_logado.role == 'admin':
+            reserva.status = 'approved'
+
         db.session.commit()
+        flash("Reserva atualizada com sucesso!", "success")
         return redirect(url_for("painel_unip"))
-    
-    # Reutilizamos o template 'nova_reserva.html', mas passando a reserva existente
+
+    # No GET: Abre o formulário com os dados atuais
     return render_template("nova_reserva.html", reserva=reserva, usuario=usuario_logado)
 
 @app.route("/excluir/<int:id>")
@@ -334,25 +445,47 @@ def admin_usuarios():
     
     return render_template("editar_usuario.html", user=user, usuario_logado=usuario_logado.login)
 
-@app.route("/admin/excluir_usuario/<int:id>")
-def excluir_usuario(id):
+@app.route("/admin/criar_usuario", methods=["POST"])
+def criar_usuario():
+    # 1. Segurança: Verifica se o usuário está logado
     if "usuario" not in session:
         return redirect("/login")
     
-    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario_logado:
-        session.clear()
-        return redirect("/login")
+    # 2. Verifica se quem está logado é realmente um Admin
+    admin_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not admin_logado or admin_logado.role != 'admin':
+        return "Acesso Negado", 403
+
+    # 3. Coleta os dados do formulário (vêm do Modal do lista.html)
+    login_novo = request.form.get("login")
+    email_novo = request.form.get("email")
+    role_nova = request.form.get("role")
+    senha_plana = request.form.get("senha")
     
-    if usuario_logado.role != 'admin':
-        return "Acesso negado", 403
-    
-    user = Usuario.query.get(id)
-    if user and user.role != 'admin':  # Não excluir admin
-        db.session.delete(user)
+    # 4. Criptografa a senha antes de salvar
+    hash_senha = bcrypt.hashpw(senha_plana.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    # 5. Cria o objeto Usuario (usando apenas as colunas que você tem no models.py)
+    novo_user = Usuario(
+        login=login_novo,
+        email=email_novo,
+        senha_hash=hash_senha,
+        role=role_nova,
+        turma="PADRAO",  # Valores padrão para não dar erro de nullable=False
+        semestre="-"
+    )
+
+    try:
+        db.session.add(novo_user)
         db.session.commit()
-    
-    return redirect(url_for("admin_usuarios"))
+        # Se você tiver configurado o flash messages no HTML:
+        # flash("Usuário criado com sucesso!", "success")
+    except Exception as e:
+        db.session.rollback()
+        return f"Erro ao criar usuário: {e}", 500
+
+    # 6. Redireciona de volta para o painel
+    return redirect("/painel_unip")
 
 @app.route("/admin/editar_usuario/<int:id>", methods=["GET", "POST"])
 def editar_usuario(id):
@@ -375,6 +508,26 @@ def editar_usuario(id):
         return redirect(url_for("admin_usuarios"))
     return render_template("editar_usuario.html", user=user, usuario_logado=usuario_logado.login)
 
+@app.route("/admin/excluir_usuario/<int:id>")
+def excluir_usuario(id):
+    if "usuario" not in session:
+        return redirect("/login")
+    
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not usuario_logado:
+        session.clear()
+        return redirect("/login")
+    
+    if usuario_logado.role != 'admin':
+        return "Acesso negado", 403
+    
+    user = Usuario.query.get(id)
+    if user and user.role != 'admin':  # Não excluir admin
+        db.session.delete(user)
+        db.session.commit()
+    
+    return redirect(url_for("admin_usuarios"))
+
 @app.route("/admin/perfil", methods=["GET", "POST"])
 def admin_perfil():
     if "usuario" not in session:
@@ -392,6 +545,103 @@ def admin_perfil():
         db.session.commit()
         return redirect(url_for("admin_perfil"))
     return render_template("admin_perfil.html", usuario=usuario)
+
+@app.route("/admin/criar_laboratorio", methods=["POST"])
+def criar_laboratorio():
+    if "usuario" not in session or Usuario.query.filter_by(login=session["usuario"]).first().role != 'admin':
+        return redirect("/login")
+    
+    nome = request.form.get('nome')
+    capacidade = request.form.get('capacidade')
+    
+    novo_lab = Laboratorio(nome=nome, capacidade=int(capacidade))
+    db.session.add(novo_lab)
+    db.session.commit()
+    flash("Laboratório criado!", "success")
+    return redirect(url_for('painel_unip'))
+
+@app.route("/admin/excluir_laboratorio/<int:id>")
+def excluir_laboratorio(id):
+    # (Adicione a mesma trava de segurança de admin aqui)
+    lab = Laboratorio.query.get(id)
+    if lab:
+        db.session.delete(lab)
+        db.session.commit()
+    return redirect(url_for('painel_unip'))
+
+@app.route("/admin/criar_turma", methods=["POST"])
+def criar_turma():
+    if "usuario" not in session or Usuario.query.filter_by(login=session["usuario"]).first().role != 'admin':
+        return redirect("/login")
+    
+    nome = request.form.get('nome')
+    curso = request.form.get('curso')
+    
+    nova_turma = Turma(nome=nome, curso=curso)
+    db.session.add(nova_turma)
+    db.session.commit()
+    flash("Turma criada!", "success")
+    return redirect(url_for('painel_unip'))
+
+
+@app.route("/admin/bloqueios", methods=["GET", "POST"])
+def gerenciar_bloqueios():
+    if "usuario" not in session:
+        return redirect("/login")
+    
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if usuario_logado.role not in ['admin', 'coordenador']:
+        return redirect(url_for('painel_unip'))
+
+    if request.method == "POST":
+        # Captura os dados do formulário
+        lab_id = request.form.get('laboratorio_id')
+        inicio_str = request.form.get('data_inicio')
+        fim_str = request.form.get('data_fim')
+        motivo = request.form.get('motivo')
+
+        # Converte strings para objetos date
+        inicio = datetime.strptime(inicio_str, '%Y-%m-%d').date()
+        fim = datetime.strptime(fim_str, '%Y-%m-%d').date()
+
+        novo_bloqueio = BloqueioLab(
+            laboratorio_id=int(lab_id),
+            data_inicio=inicio,
+            data_fim=fim,
+            motivo=motivo
+        )
+        db.session.add(novo_bloqueio)
+        db.session.commit()
+        return redirect(url_for('gerenciar_bloqueios'))
+
+    # IMPORTANTE: Busca os dados para preencher o SELECT e a TABELA
+    bloqueios = BloqueioLab.query.all()
+    lista_laboratorios = Laboratorio.query.all() # Certifica-te que esta linha existe!
+
+    # ... dentro da def gerenciar_bloqueios ...
+    lista_laboratorios = Laboratorio.query.all()
+    print(f"DEBUG: Encontrados {len(lista_laboratorios)} laboratórios no banco.")
+    for l in lista_laboratorios:
+        print(f"ID: {l.id} | Nome: {l.nome}")
+    
+    return render_template("admin_bloqueios.html", 
+                           bloqueios=bloqueios, 
+                           laboratorios=lista_laboratorios) # Passa para o HTML
+
+@app.route("/admin/excluir_bloqueio/<int:id>")
+def excluir_bloqueio(id):
+    if "usuario" not in session: return redirect("/login")
+    
+    # Apenas Admin/Coord podem excluir bloqueios
+    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
+    if usuario.role in ['admin', 'coordenador']:
+        bloqueio = BloqueioLab.query.get(id)
+        if bloqueio:
+            db.session.delete(bloqueio)
+            db.session.commit()
+            flash("Bloqueio removido com sucesso!", "success")
+            
+    return redirect(url_for('gerenciar_bloqueios'))
 
 @app.route("/coordenador/reservas")
 def coordenador_reservas():
@@ -475,6 +725,95 @@ def ver_alunos_turmas(turma_selecionada=None):
                            alunos=alunos_da_turma, 
                            turma_ativa=turma_selecionada)
 
+@app.route("/painel_unip")
+def painel_unip():
+    if "usuario" not in session:
+        return redirect("/login")
+    
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not usuario_logado:
+        session.clear()
+        return redirect("/login")
+
+    # Reservas e Bloqueios são comuns a ambos
+    reservas = ReservaLab.query.order_by(ReservaLab.data.desc()).all()
+    bloqueios = BloqueioLab.query.all()
+
+    # --- VISÃO DO ALUNO ---
+    if usuario_logado.role == 'aluno':
+        # Filtramos as reservas para mostrar apenas o que é da turma do aluno
+        # Assumindo que o Aluno tem o campo 'turma_id' no seu modelo
+        reservas_turma = [r for r in reservas if r.turma_id == usuario_logado.turma_id]
+        
+        return render_template("painel_aluno.html", 
+                               usuario=usuario_logado.login,
+                               reservas=reservas_turma,
+                               bloqueios=bloqueios)
+    
+    # --- VISÃO GESTÃO (Prof/Coord/Admin) ---
+    usuarios, todos_labs, todas_turmas = [], [], []
+    if usuario_logado.role == 'admin':
+        usuarios = Usuario.query.all()
+        todos_labs = Laboratorio.query.all()
+        todas_turmas = Turma.query.all()
+
+    return render_template("lista.html", 
+                           usuario=usuario_logado.login,
+                           usuario_id=usuario_logado.id, 
+                           role=usuario_logado.role, 
+                           reservas=reservas,
+                           usuarios=usuarios,
+                           laboratorios=todos_labs,
+                           turmas=todas_turmas,
+                           bloqueios=bloqueios)
+
+
+# --- NOVAS ROTAS DE APROVAÇÃO (DOUBLE CHECK) ---
+
+@app.route("/pre_aprovar_reserva/<int:id>")
+def pre_aprovar_reserva(id):
+    if "usuario" not in session: return redirect("/login")
+    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
+    if usuario.role not in ['coordenador', 'admin']: return "Acesso negado", 403
+    
+    reserva = ReservaLab.query.get_or_404(id)
+    reserva.status = 'pre_approved' # Status intermediário
+    db.session.commit()
+    flash("Reserva pré-aprovada! Aguarda confirmação do Admin.", "warning")
+    return redirect(url_for("painel_unip"))
+
+@app.route("/confirmar_reserva/<int:id>")
+def confirmar_reserva(id):
+    if "usuario" not in session: return redirect("/login")
+    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
+    if usuario.role != 'admin': return "Acesso negado", 403
+    
+    reserva = ReservaLab.query.get_or_404(id)
+    reserva.status = 'approved' # Status final
+    db.session.commit()
+    flash("Reserva confirmada e publicada!", "success")
+    return redirect(url_for("painel_unip"))
+
+# Rota para o Admin bloquear o laboratório
+@app.route("/bloquear_lab", methods=["POST"])
+def admin_bloquear():
+    if "usuario" not in session: return redirect("/login")
+    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
+    if usuario.role != 'admin': return "Acesso negado", 403
+
+    bloqueio = ReservaLab(
+        laboratorio=request.form.get("laboratorio"),
+        professor="SISTEMA",
+        turma="INTERDIÇÃO",
+        disciplina=f"BLOQUEIO: {request.form.get('motivo')}",
+        data=request.form.get("data"),
+        periodo=request.form.get("periodo"),
+        status='blocked', # Novo status para o CSS
+        usuario_id=usuario.id
+    )
+    db.session.add(bloqueio)
+    db.session.commit()
+    return redirect(url_for("painel_unip"))
 
 @app.route("/logout")
 def logout():
@@ -482,4 +821,7 @@ def logout():
     return redirect("/login")
 
 if __name__ == "__main__":
-    app.run(port=5000, host='localhost', debug=True)
+    with app.app_context():
+        db.create_all()
+        inicializar_unidade() # Garante que os labs existam
+    app.run(host='localhost', port=5000, debug=True)

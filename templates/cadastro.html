@@ -1,91 +1,145 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Cadastro | Organizador de Tarefas</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background-color: #f8f9fa;
-      height: 100vh;
-    }
-    .cadastro-container {
-      max-width: 450px;
-      margin: auto;
-      margin-top: 5%;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Cadastro | UNIP Lab Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root { --unip-blue: #003366; --unip-gold: #f5b915; }
+        body { background: #f4f7f9; height: 100vh; display: flex; align-items: center; }
+        .card-cadastro { border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+        .btn-unip { background-color: var(--unip-blue); color: white; }
+        .btn-unip:hover { background-color: #002244; color: white; }
+        .nav-pills .nav-link.active { background-color: var(--unip-blue); }
+        .nav-pills .nav-link { color: var(--unip-blue); font-weight: 600; }
+    </style>
 </head>
 <body>
 
-  <div class="cadastro-container">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h3 class="card-title text-center mb-4">Criar Conta</h3>
-        <form action="/cadastro" method="post">
-          <div class="mb-3">
-            <label for="usuario" class="form-label">Nome de Usuário</label>
-            <input type="text" class="form-control" name="login" required placeholder="Escolha um nome de usuário">
-          </div>
-          <div class="mb-3">
-            <label for="email" class="form-label">E-mail</label>
-            <input type="email" class="form-control" name="email" required placeholder="Digite seu e-mail">
-          </div>
-          <div class="mb-3">
-            <label for="senha" class="form-label">Senha</label>
-            <input type="password" class="form-control" name="senha" required placeholder="Crie uma senha forte">
-          </div>
-          <div class="mb-3">
-            <label for="role" class="form-label">Tipo de Usuário</label>
-            <select class="form-select" name="role" required>
-              <option value="aluno" selected>Aluno</option>
-              <option value="professor">Professor</option>
-              <option value="coordenador">Coordenador de Curso</option>
-            </select>
-          </div>
-          <div class="mb-3" id="turma-field" style="display:none;">
-            <label for="turma" class="form-label">Turma</label>
-            <input type="text" class="form-control" name="turma" placeholder="Ex: DS1P30 / CC2A18">
-          </div>
-          <div class="mb-3" id="semestre-field" style="display:none;">
-            <label for="semestre" class="form-label">Semestre</label>
-            <select class="form-select" name="semestre">
-              <option value="">Selecione</option>
-              <option value="1">1º Semestre</option>
-              <option value="2">2º Semestre</option>
-              <option value="3">3º Semestre</option>
-              <option value="4">4º Semestre</option>
-              <option value="5">5º Semestre</option>
-              <option value="6">6º Semestre</option>
-            </select>
-          </div>
-          <script>
-            const roleSelect = document.querySelector('select[name="role"]');
-            const turmaField = document.getElementById('turma-field');
-            const semestreField = document.getElementById('semestre-field');
-            function toggleFields() {
-              if (roleSelect.value === 'aluno') {
-                turmaField.style.display = '';
-                semestreField.style.display = '';
-              } else {
-                turmaField.style.display = 'none';
-                semestreField.style.display = 'none';
-              }
-            }
-            roleSelect.addEventListener('change', toggleFields);
-            window.onload = toggleFields;
-          </script>
-          <div class="d-grid">
-            <button type="submit" class="btn btn-success">Finalizar Cadastro</button>
-          </div>
-          <div class="text-center mt-3">
-            <a href="/login" class="text-decoration-none">Já tem conta? Faça Login</a>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card card-cadastro">
+                <div class="bg-white p-4 text-center border-bottom">
+                    <h3 class="fw-bold mb-0" style="color: var(--unip-blue);">Criar Conta</h3>
+                    <p class="text-muted small">Acesse o sistema de laboratórios UNIP</p>
+                </div>
 
+                <div class="card-body p-4">
+                    <ul class="nav nav-pills nav-fill mb-4 bg-light rounded-pill p-1" id="roleTab" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active rounded-pill" id="aluno-tab" data-bs-toggle="pill" onclick="setRole('aluno')">Sou Aluno</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link rounded-pill" id="staff-tab" data-bs-toggle="pill" onclick="setRole('professor')">Sou Staff</button>
+                        </li>
+                    </ul>
+
+                    <form action="/cadastro" method="POST" id="formCadastro">
+                        <input type="hidden" name="role" id="roleInput" value="aluno">
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">RA ou ID Institucional</label>
+                            <input type="text" name="login" class="form-control" placeholder="Ex: D123abc" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">E-mail Acadêmico</label>
+                            <input type="email" name="email" class="form-control" placeholder="exemplo@aluno.unip.br" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Senha</label>
+                            <input type="password" name="senha" class="form-control" required>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div id="secao-aluno">
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label class="form-label small fw-bold">Curso (Sigla)</label>
+                                    <select id="selectCurso" class="form-select" onchange="atualizarTurma()">
+                                        <option value="DS">Análise e Des. Sistemas</option>
+                                        <option value="CC">Ciência da Computação</option>
+                                        <option value="SI">Sistemas de Informação</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label small fw-bold">Semestre</label>
+                                    <input type="number" name="semestre" class="form-control" min="1" max="10" value="1" onchange="atualizarTurma()">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Turma Identificada</label>
+                                <input type="text" name="turma" id="turmaInput" class="form-control bg-light fw-bold text-primary" readonly>
+                                <div class="form-text">Gerada automaticamente conforme seu curso.</div>
+                            </div>
+                        </div>
+
+                        <div id="secao-staff" style="display: none;">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Cargo</label>
+                                <select name="cargo" id="cargoInput" class="form-select">
+                                    <option value="professor">Professor</option>
+                                    <option value="coordenador">Coordenador</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-unip w-100 py-2 fw-bold shadow-sm">
+                            Cadastrar e Entrar <i class="bi bi-arrow-right-short"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <a href="/login" class="text-decoration-none small text-secondary">Já tem uma conta? <strong>Entrar</strong></a>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+    function setRole(role) {
+        document.getElementById('roleInput').value = role;
+        const secaoAluno = document.getElementById('secao-aluno');
+        const secaoStaff = document.getElementById('secao-staff');
+        const cargoInput = document.getElementById('cargoInput');
+
+        if (role === 'aluno') {
+            secaoAluno.style.display = 'block';
+            secaoStaff.style.display = 'none';
+            cargoInput.required = false;
+            atualizarTurma(); // Garante que a sigla seja gerada ao voltar
+        } else {
+            secaoAluno.style.display = 'none';
+            secaoStaff.style.display = 'block';
+            cargoInput.required = true;
+            document.getElementById('turmaInput').value = ""; // Limpa para staff
+        }
+    }
+
+    function atualizarTurma() {
+        // Exemplo da sua lógica funcional: Sigla do Curso + Semestre + Sufixo
+        const curso = document.getElementById('selectCurso').value;
+        const semestre = document.querySelector('input[name="semestre"]').value;
+        const periodo = "P34"; // Exemplo de sufixo fixo ou vindo de outro select
+        
+        // Monta a sigla que será salva na tabela 'Turma'
+        const siglaFinal = `${curso}${semestre}${periodo}`;
+        document.getElementById('turmaInput').value = siglaFinal;
+    }
+
+    // Inicializa a sigla ao carregar a página
+    document.addEventListener('DOMContentLoaded', atualizarTurma);
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
