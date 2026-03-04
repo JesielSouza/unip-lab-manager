@@ -25,6 +25,14 @@
         .logo-container { text-align: center; margin-bottom: 30px; }
         .logo-unip-negativa { max-width: 200px; }
 
+        .link-cadastro {
+            color: var(--unip-blue);
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .link-cadastro:hover { text-decoration: underline; }
+
         .card-cadastro { 
             border: none; 
             border-radius: 16px; 
@@ -90,6 +98,9 @@
                             </div>
 
                             <div class="section-title">Dados de Acesso</div>
+                            <div class="mb-3"> <label class="form-label small fw-bold">Nome Completo</label>
+                                <input type="text" name="nome" class="form-control" placeholder="Nome completo do aluno ou docente" required>
+                            </div>
                             <div class="row g-2">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label small fw-bold" id="label_login">RA</label>
@@ -117,7 +128,7 @@
                                 <div class="row g-2">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label small fw-bold">Curso</label>
-                                        <select class="form-select" id="curso" name="curso" onchange="atualizarTurma()" required>
+                                        <select class="form-select" id="curso" name="curso" onchange="gerarSigla()">
                                             <option value="" selected disabled>Selecione seu curso</option>
                                             <option value="DS">Análise e Desenv. de Sistemas</option>
                                             <option value="AI">Automação Industrial</option>
@@ -125,34 +136,27 @@
                                             <option value="CC">Ciência da Computação</option>
                                             <option value="DR">Direito</option>
                                             <option value="AD">Administração</option>
-                                            <option value="PS">Psicologia</option>
-                                            <option value="FS">Fisioterapia</option>
-                                            <option value="EN">Enfermagem</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3 mb-3">
                                         <label class="form-label small fw-bold">Semestre</label>
-                                        <select class="form-select" id="semestre" name="semestre" onchange="atualizarTurma()" required>
-                                            <option value="" selected disabled>Semestre atual</option>
-                                            <option value="1">1º Semestre</option>
-                                            <option value="2">2º Semestre</option>
-                                            <option value="3">3º Semestre</option>
-                                            <option value="4">4º Semestre</option>
-                                            <option value="5">5º Semestre</option>
-                                            <option value="6">6º Semestre</option>
-                                            <option value="7">7º Semestre</option>
-                                            <option value="8">8º Semestre</option>
-                                            <option value="9">9º Semestre</option>
-                                            <option value="10">10º Semestre</option>
+                                        <select class="form-select" id="semestre" name="semestre" onchange="gerarSigla()">
+                                            <option value="" selected disabled>Sem.</option>
+                                            <option value="1">1º</option>
+                                            <option value="2">2º</option>
+                                            <option value="3">3º</option>
+                                            <option value="4">4º</option>
+                                            <option value="5">5º</option>
+                                            <option value="6">6º</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3 mb-3">
                                         <label class="form-label small fw-bold">Turno</label>
-                                        <select class="form-select" id="turno" name="turno" onchange="atualizarTurma()" required>
+                                        <select class="form-select" id="turno" name="turno_selecionado" onchange="gerarSigla()">
                                             <option value="" selected disabled>Turno</option>
-                                            <option value="34">Manhã (34)</option>
-                                            <option value="34">Tarde (34)</option>
-                                            <option value="34">Noite (34)</option>
+                                            <option value="34">Manhã</option>
+                                            <option value="34">Tarde</option>
+                                            <option value="34">Noite</option>
                                         </select>
                                     </div>
                                 </div>
@@ -189,6 +193,11 @@
                             </div>
 
                             <button type="submit" id="btn_submit" class="btn btn-unip w-100 py-3 mt-4 shadow-sm" disabled>Finalizar Cadastro</button>
+                            
+                            <div class="text-center border-top pt-3 mt-4">
+                                <span class="small text-muted">Já possui uma conta institucional?</span><br>
+                                <a href="/login" class="link-cadastro">Voltar para o Login</a>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -201,6 +210,7 @@
         const checkTermo = document.getElementById('aceito_lgpd');
         const btnSubmit = document.getElementById('btn_submit');
 
+        // Lógica de Scroll do Termo
         caixaTermo.addEventListener('scroll', function() {
             if (caixaTermo.offsetHeight + caixaTermo.scrollTop >= caixaTermo.scrollHeight - 5) {
                 checkTermo.disabled = false;
@@ -208,10 +218,12 @@
             }
         });
 
+        // Geração da Sigla (Corrigida)
         function gerarSigla() {
             const curso = document.getElementById('curso').value;
             const semestre = document.getElementById('semestre').value;
             const turno = document.getElementById('turno').value;
+            
             if (curso && semestre && turno) {
                 const sigla = `${curso}${semestre}P${turno}`;
                 document.getElementById('preview_sigla').innerText = sigla;
@@ -230,25 +242,26 @@
                 camposColab.style.display = 'none';
                 labelLogin.innerText = "RA (Matrícula)";
                 
-                // Exigir os campos de aluno novamente se ele voltar para 'aluno'
-                document.getElementById('curso').setAttribute('required', 'required');
-                document.getElementById('semestre').setAttribute('required', 'required');
-                document.getElementById('turno').setAttribute('required', 'required');
+                document.getElementById('curso').required = true;
+                document.getElementById('semestre').required = true;
+                document.getElementById('turno').required = true;
             } else {
                 camposAluno.style.display = 'none';
                 camposColab.style.display = 'block';
                 labelLogin.innerText = "ID / Registro Funcional";
                 
-                // Remover o 'required' dos campos do aluno para que o form do staff consiga ser enviado
-                document.getElementById('curso').removeAttribute('required');
-                document.getElementById('semestre').removeAttribute('required');
-                document.getElementById('turno').removeAttribute('required');
+                document.getElementById('curso').required = false;
+                document.getElementById('semestre').required = false;
+                document.getElementById('turno').required = false;
             }
         }
 
         function validarSenhas() {
-            if (document.getElementById('senha').value !== document.getElementById('confirma_senha').value) {
-                alert("As senhas não conferem!"); return false;
+            const senha = document.getElementById('senha').value;
+            const confirma = document.getElementById('confirma_senha').value;
+            if (senha !== confirma) {
+                alert("As senhas não conferem!"); 
+                return false;
             }
             return true;
         }

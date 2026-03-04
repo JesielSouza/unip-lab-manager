@@ -7,98 +7,155 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        :root { --unip-blue: #003366; --unip-gold: #f5b915; --bg-gray: #f4f7f9; }
-        body { background-color: var(--bg-gray); font-family: 'Segoe UI', sans-serif; }
-        .navbar-unip { background: var(--unip-blue); border-bottom: 4px solid var(--unip-gold); }
-        .card-custom { border: none; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-        .section-title { border-left: 4px solid var(--unip-gold); padding-left: 12px; font-weight: 700; color: var(--unip-blue); margin-bottom: 20px; text-transform: uppercase; font-size: 0.9rem; }
+        :root { 
+            --unip-blue: #003366; 
+            --unip-gold: #f5b915; 
+            --bg-gray: #f8fafc; 
+        }
+        
+        body { background-color: var(--bg-gray); font-family: 'Inter', 'Segoe UI', sans-serif; }
+        
+        .navbar-unip { 
+            background: linear-gradient(90deg, #002244 0%, var(--unip-blue) 100%); 
+            border-bottom: 4px solid var(--unip-gold);
+            padding: 0.8rem 0;
+        }
+
+        .section-title { 
+            font-size: 0.8rem; font-weight: 800; color: #64748b; 
+            text-transform: uppercase; letter-spacing: 1.2px;
+            border-left: 4px solid #ef4444; padding-left: 12px; margin-bottom: 20px;
+        }
+
+        .card-custom { 
+            border: none; border-radius: 20px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            background: white;
+        }
+
+        .form-label { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+        
+        .form-control, .form-select { 
+            border: 1px solid #e2e8f0; padding: 12px; border-radius: 12px; 
+        }
+
+        .btn-interditar {
+            background: #b91c1c; color: white; border: none;
+            padding: 14px; border-radius: 12px; font-weight: 700;
+            transition: all 0.3s;
+        }
+        .btn-interditar:hover { background: #991b1b; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(185, 28, 28, 0.3); }
+
+        .bloqueio-item {
+            border-left: 5px solid #ef4444;
+            transition: 0.2s;
+        }
+        .bloqueio-item:hover { background: #fffafb; }
+
+        .badge-date {
+            background: #fee2e2; color: #b91c1c;
+            font-weight: 700; font-size: 0.75rem;
+            padding: 6px 12px; border-radius: 8px;
+        }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-dark navbar-unip mb-4">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="/painel_unip"><i class="bi bi-cpu-fill me-2"></i> UNIP Lab Manager</a>
-        <a href="/painel_unip" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Voltar ao Painel</a>
+<nav class="navbar navbar-dark navbar-unip shadow mb-4">
+    <div class="container d-flex justify-content-between">
+        <a class="navbar-brand fw-bold" href="{{ url_for('painel_unip') }}">
+            <i class="bi bi-shield-lock-fill me-2"></i> UNIP LAB MANAGER
+        </a>
+        <a href="{{ url_for('painel_unip') }}" class="btn btn-sm btn-outline-light border-0 fw-bold">
+            <i class="bi bi-arrow-left me-1"></i> PAINEL
+        </a>
     </div>
 </nav>
 
-<div class="container">
+<div class="container pb-5">
     <div class="row g-4">
-        <div class="col-md-4">
+        <div class="col-lg-4">
+            <div class="section-title">Configurar Interdição</div>
             <div class="card card-custom p-4">
-                <div class="section-title">Bloquear Laboratório</div>
-                <form method="POST">
+                <form action="{{ url_for('gerenciar_bloqueios') }}" method="POST">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Laboratório</label>
+                        <label class="form-label">Laboratório</label>
                         <select name="laboratorio_id" class="form-select" required>
-                            <option value="" disabled selected>Escolha o laboratório...</option>
+                            <option value="" disabled selected>Selecionar Lab...</option>
                             {% for lab in laboratorios %}
-                            <option value="{{ lab.id }}">{{ lab.nome }}</option>
+                                <option value="{{ lab.id }}">{{ lab.nome }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Data Início</label>
+                        <label class="form-label">Início</label>
                         <input type="date" name="data_inicio" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Data Fim</label>
+                        <label class="form-label">Término</label>
                         <input type="date" name="data_fim" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Motivo (ex: Provas NP1)</label>
-                        <input type="text" name="motivo" class="form-control" placeholder="Descreva o motivo" required>
+                        <label class="form-label">Motivo do Bloqueio</label>
+                        <textarea name="motivo" class="form-control" rows="2" placeholder="Ex: Manutenção ou Provas Online" required></textarea>
                     </div>
-                    <button type="submit" class="btn btn-danger w-100 fw-bold">
-                        <i class="bi bi-lock-fill me-2"></i>Ativar Bloqueio
+                    <button type="submit" class="btn btn-interditar w-100">
+                        <i class="bi bi-lock-fill me-2"></i>APLICAR BLOQUEIO
                     </button>
                 </form>
             </div>
         </div>
 
-        <div class="col-md-8">
-            <div class="card card-custom p-4">
-                <div class="section-title">Bloqueios Configurados</div>
-                {% if bloqueios %}
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead class="table-light">
-                            <tr class="small text-muted">
-                                <th>LAB</th>
-                                <th>MOTIVO</th>
-                                <th>INÍCIO</th>
-                                <th>FIM</th>
-                                <th>AÇÕES</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for b in bloqueios %}
-                            <tr>
-                                <td><span class="badge bg-dark">{{ b.lab_rel.nome if b.lab_rel else b.laboratorio_id }}</span></td>
-                                <td class="fw-bold text-danger">{{ b.motivo }}</td>
-                                <td>{{ b.data_inicio.strftime('%d/%m/%Y') }}</td>
-                                <td>{{ b.data_fim.strftime('%d/%m/%Y') }}</td>
-                                <td>
-                                    <a href="/admin/excluir_bloqueio/{{ b.id }}" class="btn btn-link text-muted p-0" onclick="return confirm('Deseja remover este bloqueio?')">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="text-center py-5 text-muted">
-                    <i class="bi bi-shield-check opacity-25" style="font-size: 3rem;"></i>
-                    <p class="mt-2">Não há laboratórios bloqueados no momento.</p>
-                </div>
+        <div class="col-lg-8">
+            <div class="section-title">Bloqueios Ativos</div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show rounded-4 shadow-sm" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
                 {% endif %}
-            </div>
+            {% endwith %}
+
+            {% if bloqueios %}
+                {% for b in bloqueios %}
+                <div class="card card-custom mb-3 bloqueio-item">
+                    <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="badge-date">
+                                    <i class="bi bi-calendar-range me-1"></i> 
+                                    {{ b.data_inicio.strftime('%d/%m') }} - {{ b.data_fim.strftime('%d/%m') }}
+                                </span>
+                                <span class="fw-bold text-dark">{{ b.lab_rel.nome }}</span>
+                            </div>
+                            <h6 class="mb-0 text-secondary">
+                                <i class="bi bi-info-circle me-1"></i> {{ b.motivo }}
+                            </h6>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('excluir_bloqueio', id=b.id) }}" 
+                               class="btn btn-outline-danger border-0 rounded-circle"
+                               onclick="return confirm('Deseja realmente remover este bloqueio?')">
+                                <i class="bi bi-trash3-fill fs-5"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-5 bg-white rounded-4 border">
+                    <i class="bi bi-check-all text-success display-4"></i>
+                    <p class="text-muted fw-bold mt-3">Todos os laboratórios estão liberados.</p>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

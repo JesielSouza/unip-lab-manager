@@ -7,96 +7,184 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        :root { --unip-blue: #003366; --unip-gold: #f5b915; --bg-gray: #f8fafc; }
-        body { background-color: var(--bg-gray); font-family: 'Segoe UI', sans-serif; }
+        :root { 
+            --unip-blue: #003366; 
+            --unip-gold: #f5b915; 
+            --bg-gray: #f8fafc; 
+            --text-main: #1e293b;
+        }
         
-        .navbar-unip { background: var(--unip-blue); border-bottom: 4px solid var(--unip-gold); }
-        .card-reserva { border: none; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        body { background-color: var(--bg-gray); font-family: 'Inter', 'Segoe UI', sans-serif; color: var(--text-main); }
+        
+        /* Navbar Padrão */
+        .navbar-unip { 
+            background: linear-gradient(90deg, #002244 0%, var(--unip-blue) 100%); 
+            border-bottom: 4px solid var(--unip-gold);
+            padding: 0.8rem 0;
+            z-index: 1050;
+        }
 
-        /* CALENDÁRIO VISUAL */
-        .calendar-container { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; color: var(--unip-blue); font-weight: bold; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
-        .day-name { font-size: 0.7rem; font-weight: bold; color: #94a3b8; padding-bottom: 5px; }
-        .day { aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 8px; font-size: 0.9rem; transition: 0.2s; border: 1px solid transparent; }
-        .day:hover { background: var(--unip-gold); color: white; }
-        .day.selected { background: var(--unip-blue); color: white; font-weight: bold; }
+        /* Títulos de Seção */
+        .section-title { 
+            font-size: 0.8rem;
+            font-weight: 800; 
+            color: #64748b; 
+            text-transform: uppercase; 
+            letter-spacing: 1.2px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            border-left: 4px solid var(--unip-gold);
+            padding-left: 12px;
+        }
 
-        .section-title { border-left: 4px solid var(--unip-gold); padding-left: 12px; font-weight: 700; color: var(--unip-blue); margin-bottom: 25px; text-transform: uppercase; font-size: 0.8rem; }
-        .form-select, .form-control { border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; font-size: 0.9rem; }
+        /* Container do Calendário */
+        .calendar-container { 
+            background: white; 
+            border-radius: 20px; 
+            padding: 25px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+            border: 1px solid #e2e8f0;
+        }
 
-        .btn-unip { background: var(--unip-blue); color: white; font-weight: bold; border-radius: 10px; padding: 15px; transition: 0.3s; width: 100%; border: none; }
-        .btn-unip:hover { background: #004c99; transform: translateY(-2px); }
+        .calendar-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            color: var(--unip-blue); 
+            font-weight: 800;
+        }
 
-        .lab2-warning { display: none; background-color: #fffbeb; border: 1px solid #fef3c7; color: #92400e; padding: 15px; border-radius: 10px; margin-top: 15px; font-size: 0.85rem; text-align: center; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; }
+        
+        .day-name { font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
+        
+        .day { 
+            aspect-ratio: 1/1; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            border-radius: 10px; 
+            font-size: 0.9rem; 
+            font-weight: 500;
+            transition: 0.2s; 
+            color: #475569;
+        }
+        .day:hover { background: #f1f5f9; color: var(--unip-blue); }
+        .day.selected { background: var(--unip-blue); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,51,102,0.3); }
+
+        /* Estilização dos Inputs */
+        .card-reserva { border: none; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        
+        .form-label { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
+        
+        .form-control, .form-select { 
+            border: 1px solid #e2e8f0; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            font-size: 0.95rem; 
+            transition: all 0.2s;
+        }
+        .form-control:focus, .form-select:focus { 
+            border-color: var(--unip-blue); 
+            box-shadow: 0 0 0 4px rgba(0,51,102,0.05); 
+        }
+
+        /* Botão Unip */
+        .btn-unip { 
+            background: var(--unip-blue); 
+            color: white; 
+            font-weight: 700; 
+            border-radius: 12px; 
+            padding: 14px 24px; 
+            border: none;
+            transition: all 0.3s;
+        }
+        .btn-unip:hover { background: #002244; transform: translateY(-2px); color: white; box-shadow: 0 8px 15px rgba(0,51,102,0.2); }
+
+        .lab2-warning { 
+            display: none; 
+            background-color: #fff9db; 
+            border: 1px solid #ffe066; 
+            color: #856404; 
+            padding: 15px; 
+            border-radius: 12px; 
+            margin-top: 15px; 
+            font-size: 0.8rem; 
+        }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-dark navbar-unip mb-5">
-    <div class="container">
+<nav class="navbar navbar-dark navbar-unip shadow mb-4">
+    <div class="container d-flex justify-content-between">
         <a class="navbar-brand fw-bold" href="{{ url_for('painel_unip') }}">
-            <i class="bi bi-cpu-fill me-2"></i> UNIP Lab Manager
+            <i class="bi bi-cpu-fill me-2"></i> UNIP LAB MANAGER
         </a>
+        <div class="text-white small d-none d-md-block">
+            <i class="bi bi-person-circle me-1"></i> {{ usuario.nome }}
+        </div>
     </div>
 </nav>
 
-<div class="container">
+<div class="container pb-5">
     <div class="row g-4">
         
         <div class="col-lg-4">
+            <div class="section-title">1. Selecione a Data</div>
             <div class="calendar-container">
                 <div class="calendar-header">
-                    <button class="btn btn-sm btn-light" onclick="changeMonth(-1)"><i class="bi bi-chevron-left"></i></button>
+                    <button class="btn btn-sm btn-outline-secondary border-0" onclick="changeMonth(-1)"><i class="bi bi-chevron-left"></i></button>
                     <span id="monthDisplay">MARÇO 2026</span>
-                    <button class="btn btn-sm btn-light" onclick="changeMonth(1)"><i class="bi bi-chevron-right"></i></button>
+                    <button class="btn btn-sm btn-outline-secondary border-0" onclick="changeMonth(1)"><i class="bi bi-chevron-right"></i></button>
                 </div>
                 <div class="calendar-grid" id="calendarGrid"></div>
                 
                 <input type="hidden" name="data" id="data_final" form="formReserva" required>
                 
-                <div class="mt-4 p-3 bg-light rounded text-center">
-                    <small class="text-muted d-block text-uppercase" style="font-size: 0.65rem;">Data da Reserva</small>
-                    <span id="selectedDateDisplay" class="fw-bold text-primary">Selecione no calendário</span>
+                <div class="mt-4 p-3 rounded-4 border text-center bg-light">
+                    <span id="selectedDateDisplay" class="fw-bold text-primary small">Escolha um dia no calendário</span>
                 </div>
 
-                <div id="lab2-info" class="lab2-warning shadow-sm">
-                    <i class="bi bi-shield-lock-fill d-block mb-1" style="font-size: 1.5rem;"></i>
+                <div id="lab2-info" class="lab2-warning animate__animated animate__fadeIn">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
                     <strong>Lab 2: Provas Online</strong><br>
-                    Uso restrito em períodos avaliativos oficiais.
+                    Uso restrito para períodos de avaliação.
                 </div>
             </div>
         </div>
 
         <div class="col-lg-8">
+            <div class="section-title">2. Detalhes do Uso</div>
             <div class="card card-reserva">
                 <div class="card-body p-4 p-lg-5">
-                    <div class="section-title">Parâmetros do Agendamento</div>
                     
                     <form id="formReserva" method="POST">
                         <div class="row g-4">
                             
                             <div class="col-12">
-                                <label class="form-label fw-bold small">Professor Responsável</label>
+                                <label class="form-label">Professor Responsável</label>
                                 {% if usuario.role in ['admin', 'coordenador'] %}
-                                    <select name="professor" class="form-select border-primary-subtle" required>
-                                        <option value="" disabled selected>Escolha o Professor...</option>
+                                    <select name="professor" class="form-select" required>
+                                        <option value="" disabled selected>Selecionar docente...</option>
                                         {% for prof in todos_professores %}
                                             <option value="{{ prof.login }}" {% if prof.login == usuario.login %}selected{% endif %}>
-                                                {{ prof.login }} {% if prof.cargo %}({{ prof.cargo }}){% endif %}
+                                                {{ prof.nome or prof.login }}
                                             </option>
                                         {% endfor %}
                                     </select>
                                 {% else %}
-                                    <input type="text" class="form-control bg-light" value="{{ usuario.login }}" readonly>
+                                    <input type="text" class="form-control bg-light" value="{{ usuario.nome }}" readonly>
                                     <input type="hidden" name="professor" value="{{ usuario.login }}">
                                 {% endif %}
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label fw-bold small">Laboratório</label>
+                                <label class="form-label">Laboratório</label>
                                 <select name="laboratorio_id" id="labSelect" class="form-select" required onchange="handleLabChange()">
-                                    <option value="" disabled selected>Escolher Lab...</option>
+                                    <option value="" disabled selected>Escolher...</option>
                                     {% for lab in laboratorios %}
                                         <option value="{{ lab.id }}">{{ lab.nome }}</option>
                                     {% endfor %}
@@ -104,88 +192,39 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label fw-bold small">Turma / Curso</label>
+                                <label class="form-label">Turma / Curso</label>
                                 <select name="turma_id" class="form-select" required>
-                                    <option value="" disabled selected>Escolher Turma...</option>
+                                    <option value="" disabled selected>Escolher...</option>
                                     {% for t in turmas %}
-                                        <option value="{{ t.id }}">{{ t.nome }} - {{ t.curso }} ({{ t.semestre }})</option>
+                                        <option value="{{ t.id }}">{{ t.nome }} - {{ t.curso }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label fw-bold small">Horário de Início</label>
-                                <select name="horario_inicio" class="form-select" required>
-                                    <option value="08:00">08:00</option>
-                                    <option value="08:30">08:30</option>
-                                    <option value="09:00">09:00</option>
-                                    <option value="10:00">10:00</option>
-                                    <option value="10:30">10:30</option>
-                                    <option value="11:00">11:00</option>
-                                    <option value="13:00">13:00</option>
-                                    <option value="13:30">13:30</option>
-                                    <option value="14:00">14:00</option>
-                                    <option value="14:30">14:30</option>
-                                    <option value="15:00">15:00</option>
-                                    <option value="15:30">15:30</option>
-                                    <option value="16:00">16:00</option>
-                                    <option value="16:30">16:30</option>
-                                    <option value="17:00">17:00</option>
-                                    <option value="17:30">17:30</option>
-                                    <option value="18:00">18:00</option>
-                                    <option value="18:30">18:30</option>
-                                    <option value="19:00">19:00</option>
-                                    <option value="19:30">19:30</option>
-                                    <option value="20:00">20:00</option>
-                                    <option value="20:30">20:30</option>
-                                    <option value="21:00">21:00</option>
-                                    <option value="21:30">21:30</option>
-                                </select>
+                                <label class="form-label">Horário de Início</label>
+                                <input type="time" name="horario_inicio" class="form-control" required value="19:00">
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label fw-bold small">Horário de Término</label>
-                                <select name="horario_fim" class="form-select" required>
-                                    <option value="08:00">08:00</option>
-                                    <option value="08:30">08:30</option>
-                                    <option value="09:00">09:00</option>
-                                    <option value="10:00">10:00</option>
-                                    <option value="10:30">10:30</option>
-                                    <option value="11:00">11:00</option>
-                                    <option value="13:00">13:00</option>
-                                    <option value="13:30">13:30</option>
-                                    <option value="14:00">14:00</option>
-                                    <option value="14:30">14:30</option>
-                                    <option value="15:00">15:00</option>
-                                    <option value="15:30">15:30</option>
-                                    <option value="16:00">16:00</option>
-                                    <option value="16:30">16:30</option>
-                                    <option value="17:00">17:00</option>
-                                    <option value="17:30">17:30</option>
-                                    <option value="18:00">18:00</option>
-                                    <option value="18:30">18:30</option>
-                                    <option value="19:00">19:00</option>
-                                    <option value="19:30">19:30</option>
-                                    <option value="20:00">20:00</option>
-                                    <option value="20:30">20:30</option>
-                                    <option value="21:00">21:00</option>
-                                    <option value="21:30">21:30</option>
-                                </select>
+                                <label class="form-label">Horário de Término</label>
+                                <input type="time" name="horario_fim" class="form-control" required value="22:00">
                             </div>
 
                             <div class="col-12">
-                                <label class="form-label fw-bold small">Disciplina</label>
-                                <input type="text" name="disciplina" class="form-control" placeholder="Ex: Algoritmos" required>
+                                <label class="form-label">Disciplina</label>
+                                <input type="text" name="disciplina" class="form-control" placeholder="Ex: Estrutura de Dados" required>
                             </div>
                         </div>
 
-                        <div class="mt-5 d-flex gap-2">
-                            <a href="{{ url_for('painel_unip') }}" class="btn btn-light fw-bold px-4 border">VOLTAR</a>
-                            <button type="submit" class="btn btn-unip shadow-sm">
-                                <i class="bi bi-calendar-check me-2"></i>CONFIRMAR AGENDAMENTO
+                        <div class="mt-5 d-flex flex-column flex-md-row gap-3">
+                            <button type="submit" class="btn btn-unip flex-grow-1 order-2 order-md-1">
+                                <i class="bi bi-check2-circle me-2"></i>SOLICITAR AGENDAMENTO
                             </button>
+                            <a href="{{ url_for('painel_unip') }}" class="btn btn-light fw-bold px-4 border rounded-3 order-1 order-md-2">CANCELAR</a>
                         </div>
                     </form>
+
                 </div>
             </div>
         </div>
@@ -202,7 +241,9 @@
         grid.innerHTML = '';
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
+        
         monthDisplay.innerText = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate).toUpperCase();
+        
         const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
@@ -215,14 +256,17 @@
 
         for(let d=1; d<=daysInMonth; d++) {
             const el = document.createElement('div');
-            el.className = 'day'; el.innerText = d;
+            el.className = 'day'; 
+            el.innerText = d;
             const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            
             if (selectedDate === dateStr) el.classList.add('selected');
+            
             el.onclick = () => {
                 selectedDate = dateStr;
                 document.getElementById('data_final').value = dateStr;
                 const dObj = new Date(year, month, d);
-                document.getElementById('selectedDateDisplay').innerText = dObj.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase();
+                document.getElementById('selectedDateDisplay').innerHTML = `<i class="bi bi-calendar-check me-2"></i>` + dObj.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
                 renderCalendar();
             };
             grid.appendChild(el);
@@ -230,10 +274,12 @@
     }
 
     function changeMonth(offset) { currentDate.setMonth(currentDate.getMonth() + offset); renderCalendar(); }
+    
     function handleLabChange() {
-        const lab = document.getElementById('labSelect').value;
-        document.getElementById('lab2-info').style.display = (lab === "2") ? "block" : "none";
+        const labText = document.getElementById('labSelect').options[document.getElementById('labSelect').selectedIndex].text;
+        document.getElementById('lab2-info').style.display = (labText.includes("Laboratório 2")) ? "block" : "none";
     }
+    
     renderCalendar();
 </script>
 
