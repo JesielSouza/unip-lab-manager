@@ -108,7 +108,7 @@
                 </thead>
                 <tbody>
                     {# Filtro para mostrar apenas pendências que o usuário atual pode tratar #}
-                    {% for r in todas_reservas if r.status in ['pending', 'pre_approved'] %}
+                    {% for r in reservas_pendentes %}
                     <tr>
                         <td class="ps-4 py-3">
                             <span class="fw-bold d-block text-dark">{{ r.data }}</span>
@@ -124,15 +124,15 @@
                         </td>
                         <td>
                             <div class="fw-bold">{{ r.professor }}</div>
-                            <div class="small text-muted">{{ r.turma.nome if r.turma else 'N/A' }}</div>
+                            <div class="small text-muted">{{ r.turma_rel.nome if r.turma_rel else 'N/A' }}</div>
                         </td>
                         <td class="text-center">
                             <div class="d-flex justify-content-center gap-2">
                                 {# LOGICA DE BOTÕES: Coordenador aprova Pending, Admin aprova tudo o que não for final #}
-                                {% if (session['role'] == 'coordenador' and r.status == 'pending') or (session['role'] == 'admin') %}
+                                {% if (usuario_logado.role == 'coordenador' and r.status == 'pending') or (usuario_logado.role == 'admin') %}
                                 <a href="{{ url_for('aprovar_reserva', id=r.id) }}" class="btn btn-action btn-approve">
                                     <i class="bi bi-check-all me-1"></i> 
-                                    {% if session['role'] == 'admin' %} APROVAR FINAL {% else %} PRÉ-APROVAR {% endif %}
+                                    {% if usuario_logado.role == 'admin' %} APROVAR FINAL {% else %} PRÉ-APROVAR {% endif %}
                                 </a>
                                 {% endif %}
 
@@ -144,7 +144,7 @@
                     </tr>
                     {% endfor %}
                     
-                    {% if not todas_reservas %}
+                    {% if not reservas_pendentes %}
                     <tr>
                         <td colspan="5" class="text-center py-5">
                             <i class="bi bi-clipboard-check text-muted fs-1 mb-2 d-block"></i>

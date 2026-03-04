@@ -42,38 +42,11 @@
         .calendar-container { 
             background: white; 
             border-radius: 20px; 
-            padding: 25px; 
+            padding: 15px; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
             border: 1px solid #e2e8f0;
+            min-height: 400px;
         }
-
-        .calendar-header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 20px; 
-            color: var(--unip-blue); 
-            font-weight: 800;
-        }
-
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; }
-        
-        .day-name { font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
-        
-        .day { 
-            aspect-ratio: 1/1; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            cursor: pointer; 
-            border-radius: 10px; 
-            font-size: 0.9rem; 
-            font-weight: 500;
-            transition: 0.2s; 
-            color: #475569;
-        }
-        .day:hover { background: #f1f5f9; color: var(--unip-blue); }
-        .day.selected { background: var(--unip-blue); color: white; font-weight: 700; box-shadow: 0 4px 10px rgba(0,51,102,0.3); }
 
         /* Estilização dos Inputs */
         .card-reserva { border: none; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
@@ -130,25 +103,53 @@
 </nav>
 
 <div class="container pb-5">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm border-0 mb-3 rounded-3">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
     <div class="row g-4">
         
-        <div class="col-lg-4">
+        <div class="col-lg-5">
             <div class="section-title">1. Selecione a Data</div>
             <div class="calendar-container">
-                <div class="calendar-header">
-                    <button class="btn btn-sm btn-outline-secondary border-0" onclick="changeMonth(-1)"><i class="bi bi-chevron-left"></i></button>
-                    <span id="monthDisplay">MARÇO 2026</span>
-                    <button class="btn btn-sm btn-outline-secondary border-0" onclick="changeMonth(1)"><i class="bi bi-chevron-right"></i></button>
-                </div>
-                <div class="calendar-grid" id="calendarGrid"></div>
-                
-                <input type="hidden" name="data" id="data_final" form="formReserva" required>
-                
-                <div class="mt-4 p-3 rounded-4 border text-center bg-light">
-                    <span id="selectedDateDisplay" class="fw-bold text-primary small">Escolha um dia no calendário</span>
+                <!-- Cabeçalho navegação -->
+                <div class="cal-header">
+                    <button type="button" class="cal-nav" onclick="changeMonth(-1)"><i class="bi bi-chevron-left"></i></button>
+                    <span id="cal-title" class="cal-title"></span>
+                    <button type="button" class="cal-nav" onclick="changeMonth(1)"><i class="bi bi-chevron-right"></i></button>
                 </div>
 
-                <div id="lab2-info" class="lab2-warning animate__animated animate__fadeIn">
+                <!-- Grade do calendário -->
+                <div class="cal-grid" id="cal-grid"></div>
+
+                <!-- Tooltip flutuante -->
+                <div id="cal-tooltip" class="cal-tooltip" style="display:none;"></div>
+
+                <!-- Campo hidden para o form -->
+                <input type="hidden" name="data" id="data_final" form="formReserva" required>
+
+                <!-- Data selecionada -->
+                <div class="mt-3 p-2 rounded-3 border text-center bg-light">
+                    <span id="selectedDateDisplay" class="fw-bold text-primary small">
+                        <i class="bi bi-calendar3 me-1"></i> Escolha um dia no calendário
+                    </span>
+                </div>
+
+                <!-- Legenda -->
+                <div class="cal-legend mt-2">
+                    <span><span class="leg-dot" style="background:#003366"></span>Reservado</span>
+                    <span><span class="leg-dot" style="background:#ffc107"></span>Pendente</span>
+                    <span><span class="leg-dot" style="background:#dc3545"></span>Bloqueado</span>
+                </div>
+
+                <div id="lab2-info" class="lab2-warning mt-2">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
                     <strong>Lab 2: Provas Online</strong><br>
                     Uso restrito para períodos de avaliação.
@@ -156,7 +157,7 @@
             </div>
         </div>
 
-        <div class="col-lg-8">
+        <div class="col-lg-7">
             <div class="section-title">2. Detalhes do Uso</div>
             <div class="card card-reserva">
                 <div class="card-body p-4 p-lg-5">
@@ -231,57 +232,346 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    let currentDate = new Date();
-    let selectedDate = null;
+// ── CALENDÁRIO CUSTOMIZADO UNIP ──────────────────────────────────────
+let currentDate = new Date();
+let selectedDate = null;
+// eventosMap: { "YYYY-MM-DD": [ {cor, titulo, periodo, professor, disciplina, turma} ] }
+let eventosMap = {};
 
-    function renderCalendar() {
-        const grid = document.getElementById('calendarGrid');
-        const monthDisplay = document.getElementById('monthDisplay');
-        grid.innerHTML = '';
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-        
-        monthDisplay.innerText = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate).toUpperCase();
-        
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
+// Carrega eventos da API e monta o mapa por data
+async function carregarEventos() {
+    try {
+        const res = await fetch('/api/eventos');
+        const eventos = await res.json();
+        eventosMap = {};
+        eventos.forEach(ev => {
+            const dateStr = ev.start ? ev.start.split('T')[0] : null;
+            if (!dateStr) return;
 
-        ['D','S','T','Q','Q','S','S'].forEach(d => {
-            const el = document.createElement('div');
-            el.className = 'day-name'; el.innerText = d; grid.appendChild(el);
+            // Para bloqueios que têm intervalo (start → end), preenche todos os dias
+            if (ev.end && ev.display === 'background') {
+                let d = new Date(dateStr + 'T00:00:00');
+                const fim = new Date(ev.end + 'T00:00:00');
+                while (d < fim) {
+                    const k = d.toISOString().split('T')[0];
+                    if (!eventosMap[k]) eventosMap[k] = [];
+                    eventosMap[k].push({
+                        cor: '#dc3545',
+                        titulo: ev.title,
+                        periodo: 'Dia inteiro',
+                        professor: 'SISTEMA',
+                        disciplina: ev.extendedProps?.disciplina || '',
+                        turma: '',
+                        bloqueio: true
+                    });
+                    d.setDate(d.getDate() + 1);
+                }
+            } else {
+                if (!eventosMap[dateStr]) eventosMap[dateStr] = [];
+                eventosMap[dateStr].push({
+                    cor: ev.color || '#003366',
+                    titulo: ev.title,
+                    periodo: ev.extendedProps?.periodo || '',
+                    professor: ev.extendedProps?.professor || '',
+                    disciplina: ev.extendedProps?.disciplina || '',
+                    turma: ev.extendedProps?.turma || '',
+                    bloqueio: false
+                });
+            }
+        });
+        renderCalendar();
+    } catch(e) {
+        console.error('Erro ao carregar eventos:', e);
+        renderCalendar();
+    }
+}
+
+function renderCalendar() {
+    const grid = document.getElementById('cal-grid');
+    const title = document.getElementById('cal-title');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const hoje = new Date();
+    const hojeStr = hoje.toISOString().split('T')[0];
+
+    title.innerText = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
+        .format(currentDate).toUpperCase();
+
+    // Cabeçalho dias da semana
+    ['D','S','T','Q','Q','S','S'].forEach(d => {
+        const el = document.createElement('div');
+        el.className = 'cal-day-name';
+        el.innerText = d;
+        grid.appendChild(el);
+    });
+
+    // Dias vazios antes do primeiro dia
+    const firstDay = new Date(year, month, 1).getDay();
+    for (let i = 0; i < firstDay; i++) {
+        grid.appendChild(Object.assign(document.createElement('div'), { className: 'cal-day cal-empty' }));
+    }
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const evs = eventosMap[dateStr] || [];
+
+        const cell = document.createElement('div');
+        cell.className = 'cal-day';
+
+        // Estados visuais
+        if (dateStr === hojeStr) cell.classList.add('cal-hoje');
+        if (dateStr === selectedDate) cell.classList.add('cal-selected');
+
+        // Número do dia
+        const num = document.createElement('span');
+        num.className = 'cal-num';
+        num.innerText = d;
+        cell.appendChild(num);
+
+        // Dots de eventos
+        if (evs.length > 0) {
+            cell.classList.add('cal-has-events');
+            const dotsWrap = document.createElement('div');
+            dotsWrap.className = 'cal-dots';
+            // Mostra até 3 dots, o último indica "mais"
+            const maxDots = Math.min(evs.length, 3);
+            evs.slice(0, maxDots).forEach((ev, i) => {
+                const dot = document.createElement('span');
+                dot.className = 'cal-dot';
+                dot.style.background = ev.cor;
+                dotsWrap.appendChild(dot);
+            });
+            if (evs.length > 3) {
+                const more = document.createElement('span');
+                more.className = 'cal-dot-more';
+                more.innerText = `+${evs.length - 3}`;
+                dotsWrap.appendChild(more);
+            }
+            cell.appendChild(dotsWrap);
+
+            // Tooltip
+            cell.addEventListener('mouseenter', (e) => mostrarTooltip(e, dateStr, evs));
+            cell.addEventListener('mouseleave', esconderTooltip);
+        }
+
+        // Clique para selecionar data
+        cell.addEventListener('click', () => {
+            selectedDate = dateStr;
+            document.getElementById('data_final').value = dateStr;
+            const dObj = new Date(year, month, d);
+            document.getElementById('selectedDateDisplay').innerHTML =
+                `<i class="bi bi-calendar-check me-2 text-success"></i>` +
+                dObj.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            renderCalendar();
         });
 
-        for(let i=0; i<firstDay; i++) grid.appendChild(document.createElement('div'));
-
-        for(let d=1; d<=daysInMonth; d++) {
-            const el = document.createElement('div');
-            el.className = 'day'; 
-            el.innerText = d;
-            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            
-            if (selectedDate === dateStr) el.classList.add('selected');
-            
-            el.onclick = () => {
-                selectedDate = dateStr;
-                document.getElementById('data_final').value = dateStr;
-                const dObj = new Date(year, month, d);
-                document.getElementById('selectedDateDisplay').innerHTML = `<i class="bi bi-calendar-check me-2"></i>` + dObj.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-                renderCalendar();
-            };
-            grid.appendChild(el);
-        }
+        grid.appendChild(cell);
     }
+}
 
-    function changeMonth(offset) { currentDate.setMonth(currentDate.getMonth() + offset); renderCalendar(); }
-    
-    function handleLabChange() {
-        const labText = document.getElementById('labSelect').options[document.getElementById('labSelect').selectedIndex].text;
-        document.getElementById('lab2-info').style.display = (labText.includes("Laboratório 2")) ? "block" : "none";
-    }
-    
+function mostrarTooltip(e, dateStr, evs) {
+    const tip = document.getElementById('cal-tooltip');
+    const d = new Date(dateStr + 'T00:00:00');
+    const dataFormatada = d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+
+    let html = `<div class="tip-date">${dataFormatada}</div>`;
+    evs.forEach(ev => {
+        html += `<div class="tip-ev" style="border-left: 3px solid ${ev.cor}">
+            <div class="tip-titulo">${ev.titulo}</div>
+            ${ev.periodo ? `<div class="tip-info"><i class="bi bi-clock"></i> ${ev.periodo}</div>` : ''}
+            ${ev.disciplina && !ev.bloqueio ? `<div class="tip-info"><i class="bi bi-book"></i> ${ev.disciplina}</div>` : ''}
+            ${ev.professor && !ev.bloqueio ? `<div class="tip-info"><i class="bi bi-person"></i> Prof. ${ev.professor}</div>` : ''}
+        </div>`;
+    });
+    tip.innerHTML = html;
+    tip.style.display = 'block';
+
+    // Posiciona o tooltip
+    const rect = e.target.closest('.cal-day').getBoundingClientRect();
+    const calRect = document.querySelector('.calendar-container').getBoundingClientRect();
+    let top = rect.bottom - calRect.top + 6;
+    let left = rect.left - calRect.left;
+    // Evita sair pela direita
+    if (left + 200 > calRect.width) left = calRect.width - 210;
+    tip.style.top = top + 'px';
+    tip.style.left = left + 'px';
+}
+
+function esconderTooltip() {
+    document.getElementById('cal-tooltip').style.display = 'none';
+}
+
+function changeMonth(offset) {
+    currentDate.setMonth(currentDate.getMonth() + offset);
     renderCalendar();
+}
+
+function handleLabChange() {
+    const labText = document.getElementById('labSelect').options[document.getElementById('labSelect').selectedIndex].text;
+    document.getElementById('lab2-info').style.display = (labText.includes("Laboratório 2")) ? "block" : "none";
+}
+
+// Inicializa
+document.addEventListener('DOMContentLoaded', carregarEventos);
 </script>
 
+<style>
+/* ── CALENDÁRIO CUSTOMIZADO ─────────────────────────── */
+.calendar-container {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+    position: relative;
+}
+
+.cal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.cal-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #003366;
+    letter-spacing: 0.5px;
+}
+.cal-nav {
+    background: none;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: #003366;
+    font-size: 0.75rem;
+    transition: 0.2s;
+}
+.cal-nav:hover { background: #003366; color: white; border-color: #003366; }
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+}
+.cal-day-name {
+    text-align: center;
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    padding: 4px 0;
+}
+.cal-day {
+    aspect-ratio: 1/1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.15s;
+    position: relative;
+    padding: 2px;
+    gap: 2px;
+}
+.cal-day:not(.cal-empty):hover { background: #f1f5f9; }
+.cal-empty { cursor: default; }
+.cal-num {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #475569;
+    line-height: 1;
+}
+.cal-hoje { background: #fff9db; }
+.cal-hoje .cal-num { color: #b45309; font-weight: 800; }
+.cal-selected { background: #003366 !important; }
+.cal-selected .cal-num { color: white !important; }
+.cal-selected .cal-dot { opacity: 0.7; }
+
+.cal-dots {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.cal-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+.cal-dot-more {
+    font-size: 0.5rem;
+    font-weight: 800;
+    color: #64748b;
+    line-height: 1;
+}
+
+/* Tooltip */
+.cal-tooltip {
+    position: absolute;
+    z-index: 999;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px;
+    min-width: 190px;
+    max-width: 220px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    pointer-events: none;
+}
+.tip-date {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: #003366;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+}
+.tip-ev {
+    padding: 5px 6px;
+    border-radius: 6px;
+    background: #f8fafc;
+    margin-bottom: 4px;
+    padding-left: 8px;
+}
+.tip-titulo {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+.tip-info {
+    font-size: 0.65rem;
+    color: #64748b;
+    margin-top: 1px;
+}
+.tip-info i { margin-right: 3px; }
+
+/* Legenda */
+.cal-legend {
+    display: flex;
+    gap: 10px;
+    font-size: 0.65rem;
+    color: #64748b;
+    flex-wrap: wrap;
+}
+.leg-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 3px;
+}
+</style>
 </body>
 </html>

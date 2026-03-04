@@ -24,7 +24,6 @@
     .status-border-pending { border-left-color: #ffc107 !important; }        /* Amarelo */
     .status-border-rejected { border-left-color: #dc3545 !important; }       /* Vermelho */
 
-    #calendar { font-size: 0.85em; background: white; padding: 10px; border-radius: 8px; }
     .empty-state { border: 2px dashed #dee2e6; border-radius: 15px; color: #adb5bd; }
     .navbar-brand { font-size: 1.1rem; }
   </style>
@@ -43,7 +42,7 @@
         </a>
         {% endif %}
 
-        <span class="me-3">Usuário: <strong>{{ usuario }}</strong> ({{ role }})</span>
+        <span class="me-3">Usuário: <strong>{{ usuario.nome }}</strong> ({{ role }})</span>
         <a class="btn btn-outline-light btn-sm" href="/logout">Sair</a>
       </div>
     </div>
@@ -188,9 +187,34 @@
 
       <div class="col-lg-4">
         <div class="card shadow-sm border-0 mb-4">
-            <div class="card-body">
-                <h6 class="fw-bold text-center mb-3"><i class="bi bi-calendar3 me-2 text-primary"></i>Agenda Mensal</h6>
-                <div id="calendar"></div>
+            <div class="card-body p-2">
+                <h6 class="fw-bold text-center mb-2"><i class="bi bi-calendar3 me-2 text-primary"></i>Agenda Mensal</h6>
+
+                <!-- Cabeçalho navegação -->
+                <div class="cal-header">
+                    <button type="button" class="cal-nav" onclick="changeMonth(-1)"><i class="bi bi-chevron-left"></i></button>
+                    <span id="cal-title" class="cal-title"></span>
+                    <button type="button" class="cal-nav" onclick="changeMonth(1)"><i class="bi bi-chevron-right"></i></button>
+                </div>
+
+                <!-- Grade -->
+                <div class="cal-grid" id="cal-grid"></div>
+
+                <!-- Legenda -->
+                <div class="cal-legend mt-2 mb-2">
+                    <span><span class="leg-dot" style="background:#003366"></span>Reservado</span>
+                    <span><span class="leg-dot" style="background:#ffc107"></span>Pendente</span>
+                    <span><span class="leg-dot" style="background:#dc3545"></span>Bloqueado</span>
+                </div>
+
+                <!-- Painel de detalhes do dia clicado -->
+                <div id="cal-detail" style="display:none;" class="cal-detail">
+                    <div class="cal-detail-header">
+                        <span id="cal-detail-date"></span>
+                        <button type="button" onclick="fecharDetail()" class="cal-detail-close">&times;</button>
+                    </div>
+                    <div id="cal-detail-list"></div>
+                </div>
             </div>
         </div>
       </div>
@@ -261,21 +285,175 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
   <script>
     function abrirEditarUsuario(id, login, email, role, nome) {
         document.getElementById('formEditarUsuario').action = '/admin/editar_usuario/' + id;
-        document.getElementById('edit_nome').value = nome || ''; 
+        document.getElementById('edit_nome').value = nome || '';
         document.getElementById('edit_login').value = login;
         document.getElementById('edit_email').value = email;
         document.getElementById('edit_role').value = role;
         new bootstrap.Modal(document.getElementById('modalEditarUsuario')).show();
     }
-    document.addEventListener('DOMContentLoaded', function() {
-      new FullCalendar.Calendar(document.getElementById('calendar'), {
-        initialView: 'dayGridMonth', locale: 'pt-br', height: 'auto', events: '/api/eventos'
-      }).render();
-    });
+
+    // ── CALENDÁRIO CUSTOMIZADO UNIP ──────────────────────────────────────
+    let currentDate = new Date();
+    let eventosMap = {};
+    let selectedCalDate = null;
+
+    async function carregarEventos() {
+        try {
+            const res = await fetch('/api/eventos');
+            const eventos = await res.json();
+            eventosMap = {};
+            eventos.forEach(ev => {
+                const dateStr = ev.start ? ev.start.split('T')[0] : null;
+                if (!dateStr) return;
+                if (ev.end && ev.display === 'background') {
+                    let d = new Date(dateStr + 'T00:00:00');
+                    const fim = new Date(ev.end + 'T00:00:00');
+                    while (d < fim) {
+                        const k = d.toISOString().split('T')[0];
+                        if (!eventosMap[k]) eventosMap[k] = [];
+                        eventosMap[k].push({ cor: '#dc3545', titulo: ev.title, periodo: 'Dia inteiro', professor: 'SISTEMA', disciplina: ev.extendedProps?.disciplina || '', turma: '', bloqueio: true });
+                        d.setDate(d.getDate() + 1);
+                    }
+                } else {
+                    if (!eventosMap[dateStr]) eventosMap[dateStr] = [];
+                    eventosMap[dateStr].push({ cor: ev.color || '#003366', titulo: ev.title, periodo: ev.extendedProps?.periodo || '', professor: ev.extendedProps?.professor || '', disciplina: ev.extendedProps?.disciplina || '', turma: ev.extendedProps?.turma || '', bloqueio: false });
+                }
+            });
+            renderCalendar();
+        } catch(e) {
+            console.error('Erro ao carregar eventos:', e);
+            renderCalendar();
+        }
+    }
+
+    function renderCalendar() {
+        const grid = document.getElementById('cal-grid');
+        const title = document.getElementById('cal-title');
+        if (!grid) return;
+        grid.innerHTML = '';
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const hojeStr = new Date().toISOString().split('T')[0];
+
+        title.innerText = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate).toUpperCase();
+
+        ['D','S','T','Q','Q','S','S'].forEach(d => {
+            const el = document.createElement('div');
+            el.className = 'cal-day-name'; el.innerText = d; grid.appendChild(el);
+        });
+
+        const firstDay = new Date(year, month, 1).getDay();
+        for (let i = 0; i < firstDay; i++) grid.appendChild(Object.assign(document.createElement('div'), { className: 'cal-day cal-empty' }));
+
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const evs = eventosMap[dateStr] || [];
+            const cell = document.createElement('div');
+            cell.className = 'cal-day';
+            if (dateStr === hojeStr) cell.classList.add('cal-hoje');
+            if (dateStr === selectedCalDate) cell.classList.add('cal-selected');
+
+            const num = document.createElement('span');
+            num.className = 'cal-num'; num.innerText = d; cell.appendChild(num);
+
+            if (evs.length > 0) {
+                const dotsWrap = document.createElement('div');
+                dotsWrap.className = 'cal-dots';
+                evs.slice(0, 3).forEach(ev => {
+                    const dot = document.createElement('span');
+                    dot.className = 'cal-dot'; dot.style.background = ev.cor; dotsWrap.appendChild(dot);
+                });
+                if (evs.length > 3) {
+                    const more = document.createElement('span');
+                    more.className = 'cal-dot-more'; more.innerText = `+${evs.length - 3}`; dotsWrap.appendChild(more);
+                }
+                cell.appendChild(dotsWrap);
+            }
+
+            if (!cell.classList.contains('cal-empty')) {
+                cell.addEventListener('click', () => abrirDetail(dateStr, year, month, d));
+            }
+            grid.appendChild(cell);
+        }
+    }
+
+    function abrirDetail(dateStr, year, month, d) {
+        selectedCalDate = dateStr;
+        renderCalendar();
+
+        const evs = eventosMap[dateStr] || [];
+        const detail = document.getElementById('cal-detail');
+        const dateLabel = document.getElementById('cal-detail-date');
+        const list = document.getElementById('cal-detail-list');
+
+        const dObj = new Date(year, month, d);
+        dateLabel.innerText = dObj.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+        if (evs.length === 0) {
+            list.innerHTML = '<p class="text-muted small text-center py-2 mb-0">Nenhum evento neste dia.</p>';
+        } else {
+            list.innerHTML = evs.map(ev => `
+                <div class="cal-detail-item" style="border-left: 3px solid ${ev.cor}">
+                    <div class="cal-detail-title">${ev.titulo}</div>
+                    ${ev.periodo ? `<div class="cal-detail-info"><i class="bi bi-clock"></i> ${ev.periodo}</div>` : ''}
+                    ${ev.disciplina && !ev.bloqueio ? `<div class="cal-detail-info"><i class="bi bi-book"></i> ${ev.disciplina}</div>` : ''}
+                    ${ev.professor && !ev.bloqueio ? `<div class="cal-detail-info"><i class="bi bi-person"></i> Prof. ${ev.professor}</div>` : ''}
+                    ${ev.turma && !ev.bloqueio ? `<div class="cal-detail-info"><i class="bi bi-people"></i> ${ev.turma}</div>` : ''}
+                </div>`).join('');
+        }
+
+        detail.style.display = 'block';
+    }
+
+    function fecharDetail() {
+        document.getElementById('cal-detail').style.display = 'none';
+        selectedCalDate = null;
+        renderCalendar();
+    }
+
+    function changeMonth(offset) {
+        currentDate.setMonth(currentDate.getMonth() + offset);
+        fecharDetail();
+    }
+
+    document.addEventListener('DOMContentLoaded', carregarEventos);
   </script>
+
+  <style>
+    .cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .cal-title { font-size:0.75rem; font-weight:800; color:#003366; letter-spacing:0.5px; }
+    .cal-nav { background:none; border:1px solid #e2e8f0; border-radius:6px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#003366; font-size:0.7rem; transition:0.2s; }
+    .cal-nav:hover { background:#003366; color:white; border-color:#003366; }
+    .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+    .cal-day-name { text-align:center; font-size:0.58rem; font-weight:800; color:#94a3b8; text-transform:uppercase; padding:3px 0; }
+    .cal-day { aspect-ratio:1/1; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:6px; cursor:default; transition:0.15s; padding:1px; gap:1px; }
+    .cal-day:not(.cal-empty) { cursor:pointer; }
+    .cal-day:not(.cal-empty):hover { background:#f1f5f9; }
+    .cal-num { font-size:0.68rem; font-weight:500; color:#475569; line-height:1; }
+    .cal-hoje { background:#fff9db !important; }
+    .cal-hoje .cal-num { color:#b45309; font-weight:800; }
+    .cal-selected { background:#003366 !important; }
+    .cal-selected .cal-num { color:white !important; }
+    .cal-selected .cal-dot { opacity:0.7; }
+    .cal-dots { display:flex; gap:2px; align-items:center; justify-content:center; flex-wrap:wrap; }
+    .cal-dot { width:4px; height:4px; border-radius:50%; display:inline-block; }
+    .cal-dot-more { font-size:0.48rem; font-weight:800; color:#64748b; }
+    .cal-legend { display:flex; gap:8px; font-size:0.62rem; color:#64748b; flex-wrap:wrap; }
+    .leg-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:2px; }
+    /* Painel de detalhes */
+    .cal-detail { border-top:1px solid #e2e8f0; padding-top:10px; margin-top:4px; }
+    .cal-detail-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .cal-detail-header span { font-size:0.72rem; font-weight:800; color:#003366; text-transform:capitalize; }
+    .cal-detail-close { background:none; border:none; font-size:1rem; color:#94a3b8; cursor:pointer; line-height:1; padding:0; }
+    .cal-detail-close:hover { color:#dc3545; }
+    .cal-detail-item { padding:6px 8px; border-radius:6px; background:#f8fafc; margin-bottom:5px; }
+    .cal-detail-title { font-size:0.72rem; font-weight:700; color:#1e293b; }
+    .cal-detail-info { font-size:0.63rem; color:#64748b; margin-top:1px; }
+    .cal-detail-info i { margin-right:3px; }
+  </style>
 </body>
 </html>

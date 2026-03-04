@@ -1,5 +1,33 @@
-__pycache__
-instance/
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+
+# Ambiente virtual
+venv/
+env/
+.venv/
+
+# Flask / Banco
+instance/
+*.sqlite
+*.db
+
+# Contexto local (não versionar)
+contexto_projeto.md
+
+# Variáveis de ambiente
 .env
+.env.*
+
+# VSCode
+.vscode/
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log

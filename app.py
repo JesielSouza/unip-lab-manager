@@ -176,7 +176,7 @@ def cadastro():
         # 1. Verificação de existência
         if Usuario.query.filter_by(login=login).first():
             flash("Este RA/ID já está cadastrado!", "danger")
-            return redirect(url_for("cadastro"))
+            return render_template('cadastro.html')
 
         # 2. Criptografia segura
         senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -242,40 +242,64 @@ def cadastro():
 @app.route("/api/eventos")
 def api_eventos():
     try:
-        # Mantemos o seu filtro original (não mexe no que funciona!)
+        from datetime import timedelta
         reservas = ReservaLab.query.filter(ReservaLab.status != 'rejected').all()
         eventos = []
-        
+
         for r in reservas:
-            # Lógica de Cores Original
             cor = "#003366"  # Azul UNIP
             if r.status in ['pending', 'pre_approved']:
                 cor = "#ffc107"  # Amarelo
             if (r.disciplina and "MANUTENÇÃO" in r.disciplina.upper()) or r.status == 'blocked':
                 cor = "#dc3545"  # Vermelho
 
-            # Usando os nomes REAIS do seu models.py
-            # Relacionamentos: r.lab e r.turma_rel
             nome_lab = r.lab.nome if r.lab else "Lab Indefinido"
             nome_turma = r.turma_rel.nome if r.turma_rel else "Sem Turma"
-            
-            # Montando o horário (ex: "19:30 - 21:30")
             periodo_formatado = f"{r.horario_inicio} - {r.horario_fim}"
+
+            # Converte data de DD/MM/YYYY para YYYY-MM-DD para o FullCalendar
+            try:
+                data_iso = datetime.strptime(r.data, '%d/%m/%Y').strftime('%Y-%m-%d')
+            except Exception:
+                data_iso = r.data
 
             eventos.append({
                 "id": r.id,
-                "title": f"{nome_lab} - {nome_turma}",
-                "start": r.data,
+                "title": f"{nome_lab}",
+                "start": f"{data_iso}T{r.horario_inicio}:00",
+                "end": f"{data_iso}T{r.horario_fim}:00",
                 "color": cor,
                 "extendedProps": {
                     "professor": r.professor or "Não informado",
                     "disciplina": r.disciplina or "N/A",
-                    "periodo": periodo_formatado  # Agora exibe o intervalo real
+                    "turma": nome_turma,
+                    "periodo": periodo_formatado
                 }
             })
+
+        # Adiciona bloqueios como eventos de fundo vermelhos
+        bloqueios = BloqueioLab.query.all()
+        for b in bloqueios:
+            nome_lab = b.lab_rel.nome if b.lab_rel else "Laboratório"
+            # +1 dia pois o FullCalendar usa end exclusivo
+            data_fim_exclusivo = (b.data_fim + timedelta(days=1)).strftime('%Y-%m-%d')
+            eventos.append({
+                "id": f"bloqueio_{b.id}",
+                "title": f"🔒 {nome_lab}: {b.motivo}",
+                "start": b.data_inicio.strftime('%Y-%m-%d'),
+                "end": data_fim_exclusivo,
+                "color": "#dc3545",
+                "display": "background",
+                "extendedProps": {
+                    "tipo": "bloqueio",
+                    "professor": "SISTEMA",
+                    "disciplina": b.motivo,
+                    "periodo": "Dia inteiro"
+                }
+            })
+
         return jsonify(eventos)
     except Exception as e:
-        # Log de erro para você ver no terminal se algo novo acontecer
         print(f"Erro na API de Eventos: {e}")
         return jsonify([])
 
@@ -312,13 +336,19 @@ def nova_reserva():
         # 1. Validar se a data foi enviada
         if not data_str:
             flash("Por favor, selecione uma data no calendário.", "warning")
-            return redirect(url_for('nova_reserva'))
+            laboratorios = Laboratorio.query.all()
+            turmas = Turma.query.all()
+            todos_professores = Usuario.query.filter(Usuario.role.in_(["professor", "coordenador"])).all()
+            return render_template("nova_reserva.html", laboratorios=laboratorios, turmas=turmas, usuario=usuario_logado, todos_professores=todos_professores)
 
         try:
             data_selecionada = datetime.strptime(data_str, '%Y-%m-%d').date()
         except ValueError:
             flash("Formato de data inválido.", "danger")
-            return redirect(url_for('nova_reserva'))
+            laboratorios = Laboratorio.query.all()
+            turmas = Turma.query.all()
+            todos_professores = Usuario.query.filter(Usuario.role.in_(["professor", "coordenador"])).all()
+            return render_template("nova_reserva.html", laboratorios=laboratorios, turmas=turmas, usuario=usuario_logado, todos_professores=todos_professores)
 
         # TRAVA 2: Verificação de Bloqueios (Ex: Provas no Lab 2)
         bloqueio = BloqueioLab.query.filter(
@@ -329,7 +359,10 @@ def nova_reserva():
 
         if bloqueio:
             flash(f"O laboratório está interditado: {bloqueio.motivo}", "danger")
-            return redirect(url_for('nova_reserva'))
+            laboratorios = Laboratorio.query.all()
+            turmas = Turma.query.all()
+            todos_professores = Usuario.query.filter(Usuario.role.in_(["professor", "coordenador"])).all()
+            return render_template("nova_reserva.html", laboratorios=laboratorios, turmas=turmas, usuario=usuario_logado, todos_professores=todos_professores)
 
         # TRAVA 3: Conflito de Horário
         conflito = ReservaLab.query.filter(
@@ -341,7 +374,10 @@ def nova_reserva():
 
         if conflito:
             flash(f"Conflito de horário! Este laboratório já está reservado para {conflito.disciplina}.", "warning")
-            return redirect(url_for('nova_reserva'))
+            laboratorios = Laboratorio.query.all()
+            turmas = Turma.query.all()
+            todos_professores = Usuario.query.filter(Usuario.role.in_(["professor", "coordenador"])).all()
+            return render_template("nova_reserva.html", laboratorios=laboratorios, turmas=turmas, usuario=usuario_logado, todos_professores=todos_professores)
 
         # DEFINIÇÃO RÍGIDA DE STATUS POR CARGO (Correção da Hierarquia)
         if usuario_logado.role == 'admin':
@@ -654,8 +690,9 @@ def criar_turma():
     
     nome = request.form.get('nome')
     curso = request.form.get('curso')
+    semestre = request.form.get('semestre', '1º Semestre')
     
-    nova_turma = Turma(nome=nome, curso=curso)
+    nova_turma = Turma(nome=nome, curso=curso, semestre=semestre)
     db.session.add(nova_turma)
     db.session.commit()
     flash("Turma criada!", "success")
@@ -743,7 +780,7 @@ def coordenador_reservas():
     return render_template("coordenador_reservas.html", 
                            reservas_pendentes=reservas_pendentes, 
                            todas_reservas=todas_reservas,
-                           usuario_logado=usuario.nome)
+                           usuario_logado=usuario)
 
 # ROTA DE APROVAÇÃO (CORRIGIDA PARA ADMIN FINALIZAR COORDENADOR)
 @app.route("/aprovar_reserva/<int:id>")
@@ -887,26 +924,7 @@ def confirmar_reserva(id):
     flash("Reserva confirmada e publicada!", "success")
     return redirect(url_for("painel_unip"))
 
-# Rota para o Admin bloquear o laboratório
-@app.route("/bloquear_lab", methods=["POST"])
-def admin_bloquear():
-    if "usuario" not in session: return redirect("/login")
-    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
-    if usuario.role != 'admin': return "Acesso negado", 403
-
-    bloqueio = ReservaLab(
-        laboratorio=request.form.get("laboratorio"),
-        professor="SISTEMA",
-        turma="INTERDIÇÃO",
-        disciplina=f"BLOQUEIO: {request.form.get('motivo')}",
-        data=request.form.get("data"),
-        periodo=request.form.get("periodo"),
-        status='blocked', # Novo status para o CSS
-        usuario_id=usuario.id
-    )
-    db.session.add(bloqueio)
-    db.session.commit()
-    return redirect(url_for("painel_unip"))
+# Rota /bloquear_lab removida — use /admin/bloqueios (gerenciar_bloqueios)
 
 @app.route("/logout")
 def logout():
