@@ -2,17 +2,22 @@ from sqlalchemy import or_
 from models import ReservaLab, db, Usuario, Laboratorio, Turma, BloqueioLab
 from flask import Flask, jsonify, render_template, request, redirect, session, url_for, flash
 from datetime import datetime
-import json, os
+import os
 import bcrypt
 from flask_migrate import Migrate
 
 app = Flask(__name__)
-app.secret_key = "chave-secreta-123"  # Necessário para usar sessões
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-troque-em-producao")
 app.config['JSON_AS_ASCII'] = False # Correção para exibir acentos corretamente no JSON
 
-# CONFIGURAÇÃO DO BANCO SQLite
+# CONFIGURAÇÃO DO BANCO — usa DATABASE_URL em produção, SQLite em dev
 basedir = os.path.abspath(os.path.dirname(__file__))
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(basedir, "instance", "app.sqlite")
+default_db = "sqlite:///" + os.path.join(basedir, "instance", "app.sqlite")
+database_url = os.environ.get("DATABASE_URL", default_db)
+# Railway gera URLs com "postgres://" mas SQLAlchemy exige "postgresql://"
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 migrate = Migrate(app, db)
@@ -101,8 +106,6 @@ def relatorio_reservas():
     # Para popular selects
     turmas = [t[0] for t in db.session.query(Turma.nome).join(ReservaLab, Turma.id == ReservaLab.turma_id).distinct().all() if t[0]]
     disciplinas = [d[0] for d in db.session.query(ReservaLab.disciplina).distinct().all() if d[0]]
-    # Período antigo removido – agora usamos horário início/fim
-    periodos = []
     # Status internos padronizados
     status_list = ["pending", "pre_approved", "approved", "rejected", "blocked"]
 
@@ -119,19 +122,6 @@ def relatorio_reservas():
         usuario_logado=usuario.login
     )
 
-
-# Utilitário: carregar usuários
-def carregar_usuarios():
-    try:
-        with open("usuarios.json", "r", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return []
-
-# Utilitário: salvar usuários
-def salvar_usuarios(usuarios):
-    with open("usuarios.json", "w", encoding="utf-8") as f:
-        json.dump(usuarios, f, indent=4, ensure_ascii=False)
 
 @app.route("/")
 def index():
@@ -151,6 +141,10 @@ def login():
         if not usuario:
             # Em vez de 404, podemos usar o flash para ficar mais bonito na tela
             flash("Usuário não encontrado", "danger")
+            return render_template("login.html")
+
+        if not usuario.ativo:
+            flash("Conta desativada. Entre em contato com o administrador.", "danger")
             return render_template("login.html")
 
         if bcrypt.checkpw(senha_form.encode(), usuario.senha_hash.encode()):
@@ -538,20 +532,7 @@ def admin_usuarios():
         return "Acesso negado", 403
     
     usuarios = Usuario.query.all()
-    return render_template("admin_usuarios.html", usuarios=usuarios, usuario_logado=usuario.login)
-    
-    user = Usuario.query.get_or_404(id)
-    
-    if request.method == "POST":
-        user.login = request.form["login"]
-        user.email = request.form["email"]
-        user.role = request.form["role"]
-        user.turma = request.form.get("turma")
-        user.semestre = request.form.get("semestre")
-        db.session.commit()
-        return redirect(url_for("admin_usuarios"))
-    
-    return render_template("editar_usuario.html", user=user, usuario_logado=usuario_logado.login)
+    return render_template("admin_usuarios.html", usuarios=usuarios, usuario_logado=usuario)
 
 @app.route("/admin/criar_usuario", methods=["POST"])
 def criar_usuario():
@@ -573,14 +554,12 @@ def criar_usuario():
 
     # 5. Cria o objeto (Incluímos o campo 'nome')
     novo_user = Usuario(
-        nome=nome_novo,      # <--- AGORA O BANCO ACEITA O INSERT
+        nome=nome_novo,
         login=login_novo,
         email=email_novo,
         senha_hash=hash_senha,
         role=role_nova,
-        turma="PADRAO",  
-        semestre="-",
-        ativo=True           # É bom garantir que o user já nasça ativo
+        ativo=True
     )
 
     try:
@@ -592,7 +571,7 @@ def criar_usuario():
 
     return redirect("/painel_unip")
 
-@app.route("/admin/editar_usuario/<int:id>", methods=["POST"])
+@app.route("/admin/editar_usuario/<int:id>", methods=["GET", "POST"])
 def editar_usuario(id):
     if "usuario" not in session:
         return redirect("/login")
@@ -602,15 +581,20 @@ def editar_usuario(id):
         return "Acesso negado", 403
 
     user = Usuario.query.get_or_404(id)
-    
-    # Atualiza os dados básicos
-    user.nome = request.form.get("nome") # Novo campo funcional
-    user.login = request.form.get("login")
-    user.email = request.form.get("email")
-    user.role = request.form.get("role")
-    
-    # Se enviou senha, criptografa e atualiza. Se não, mantém a atual.
-    nova_senha = request.form.get("senha")
+
+    if request.method == "GET":
+        return render_template("editar_usuario.html", user=user)
+
+    # POST: Atualiza os dados
+    user.nome = request.form.get("nome", user.nome)
+    user.login = request.form.get("login", user.login)
+    user.email = request.form.get("email", user.email)
+    user.role = request.form.get("role", user.role)
+    user.turma = request.form.get("turma") or None
+    user.semestre = request.form.get("semestre") or None
+
+    # Se enviou nova_senha, criptografa e atualiza. Se não, mantém a atual.
+    nova_senha = request.form.get("nova_senha")
     if nova_senha and nova_senha.strip() != "":
         user.senha_hash = bcrypt.hashpw(nova_senha.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
@@ -621,8 +605,7 @@ def editar_usuario(id):
         db.session.rollback()
         flash(f"Erro ao salvar: {e}", "danger")
 
-    # Redireciona de volta para o painel (onde está a aba de usuários)
-    return redirect(url_for("painel_unip"))
+    return redirect(url_for("admin_usuarios"))
 
 @app.route("/admin/excluir_usuario/<int:id>")
 def excluir_usuario(id):
@@ -676,11 +659,17 @@ def criar_laboratorio():
 
 @app.route("/admin/excluir_laboratorio/<int:id>")
 def excluir_laboratorio(id):
-    # (Adicione a mesma trava de segurança de admin aqui)
+    if "usuario" not in session:
+        return redirect("/login")
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not usuario_logado or usuario_logado.role != 'admin':
+        return "Acesso negado", 403
+
     lab = Laboratorio.query.get(id)
     if lab:
         db.session.delete(lab)
         db.session.commit()
+        flash("Laboratório removido!", "success")
     return redirect(url_for('painel_unip'))
 
 @app.route("/admin/config")
@@ -800,15 +789,8 @@ def gerenciar_bloqueios():
         db.session.commit()
         return redirect(url_for('gerenciar_bloqueios'))
 
-    # IMPORTANTE: Busca os dados para preencher o SELECT e a TABELA
     bloqueios = BloqueioLab.query.all()
-    lista_laboratorios = Laboratorio.query.all() # Certifica-te que esta linha existe!
-
-    # ... dentro da def gerenciar_bloqueios ...
     lista_laboratorios = Laboratorio.query.all()
-    print(f"DEBUG: Encontrados {len(lista_laboratorios)} laboratórios no banco.")
-    for l in lista_laboratorios:
-        print(f"ID: {l.id} | Nome: {l.nome}")
     
     return render_template("admin_bloqueios.html", 
                            bloqueios=bloqueios, 
@@ -911,10 +893,12 @@ def ver_alunos_turmas(turma_selecionada=None):
     )
     lista_turmas = [t[0] for t in turmas_query if t[0]]
     
-    # 2. Se o professor escolheu uma turma, buscamos os alunos daquela turma
+    # 2. Se o professor escolheu uma turma, buscamos os alunos pelo turma_id
     alunos_da_turma = []
     if turma_selecionada:
-        alunos_da_turma = Usuario.query.filter_by(role='aluno', turma=turma_selecionada).all()
+        turma_obj = Turma.query.filter_by(nome=turma_selecionada).first()
+        if turma_obj:
+            alunos_da_turma = Usuario.query.filter_by(role='aluno', turma_id=turma_obj.id).all()
     
     return render_template("ver_alunos_turmas.html", 
                            turmas=lista_turmas, 
@@ -969,33 +953,8 @@ def painel_unip():
                            bloqueios=bloqueios)
 
 
-# --- NOVAS ROTAS DE APROVAÇÃO (DOUBLE CHECK) ---
-
-@app.route("/pre_aprovar_reserva/<int:id>")
-def pre_aprovar_reserva(id):
-    if "usuario" not in session: return redirect("/login")
-    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
-    if usuario.role not in ['coordenador', 'admin']: return "Acesso negado", 403
-    
-    reserva = ReservaLab.query.get_or_404(id)
-    reserva.status = 'pre_approved' # Status intermediário
-    db.session.commit()
-    flash("Reserva pré-aprovada! Aguarda confirmação do Admin.", "warning")
-    return redirect(url_for("painel_unip"))
-
-@app.route("/confirmar_reserva/<int:id>")
-def confirmar_reserva(id):
-    if "usuario" not in session: return redirect("/login")
-    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
-    if usuario.role != 'admin': return "Acesso negado", 403
-    
-    reserva = ReservaLab.query.get_or_404(id)
-    reserva.status = 'approved' # Status final
-    db.session.commit()
-    flash("Reserva confirmada e publicada!", "success")
-    return redirect(url_for("painel_unip"))
-
 # Rota /bloquear_lab removida — use /admin/bloqueios (gerenciar_bloqueios)
+# Rotas /pre_aprovar_reserva e /confirmar_reserva removidas — use /aprovar_reserva (com lógica de role)
 
 @app.route("/logout")
 def logout():
@@ -1006,4 +965,4 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
         inicializar_unidade() # Garante que os labs existam
-    app.run(host='localhost', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')
