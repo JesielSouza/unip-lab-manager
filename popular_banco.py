@@ -30,21 +30,24 @@ with app.app_context():
     # 3. Criar Usuários (Removido o campo 'nome' que não existe no seu model)
     senha_padrao = gerar_senha("unip123")
     
+    turma_ads = Turma.query.filter_by(nome="ADS1P30").first()
+
     usuarios_dados = [
-        {"login": "coord", "role": "coordenador", "email": "coord@unip.br", "turma": "COORDENACAO", "semestre": "-"},
-        {"login": "prof_jose", "role": "professor", "email": "jose@unip.br", "turma": "DOCENTE", "semestre": "-"},
-        {"login": "aluno_teste", "role": "aluno", "email": "aluno@unip.br", "turma": "ADS1P30", "semestre": "1"}
+        {"login": "coord", "nome": "Coordenador Teste", "role": "coordenador", "email": "coord@unip.br", "turma_id": None},
+        {"login": "prof_jose", "nome": "Prof. José Silva", "role": "professor", "email": "jose@unip.br", "turma_id": None},
+        {"login": "aluno_teste", "nome": "Aluno Teste", "role": "aluno", "email": "aluno@unip.br", "turma_id": turma_ads.id if turma_ads else None},
     ]
 
     for dado in usuarios_dados:
         if not Usuario.query.filter_by(login=dado["login"]).first():
             user = Usuario(
                 login=dado["login"],
+                nome=dado["nome"],
                 email=dado["email"],
                 senha_hash=senha_padrao,
                 role=dado["role"],
-                turma=dado["turma"],
-                semestre=dado["semestre"]
+                turma_id=dado["turma_id"],
+                semestre="1º Semestre" if dado["role"] == "aluno" else None,
             )
             db.session.add(user)
     

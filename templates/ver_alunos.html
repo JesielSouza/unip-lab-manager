@@ -7,43 +7,69 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <style>
-    body { background-color: #f8f9fa; }
+    :root { --unip-blue: #003366; --unip-dark: #002244; --unip-gold: #f5b915; }
+    body { background: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .navbar-unip { background: linear-gradient(90deg, var(--unip-dark) 0%, var(--unip-blue) 100%); border-bottom: 4px solid var(--unip-gold); }
+    .page-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 1.25rem 0; margin-bottom: 1.5rem; }
+    .page-header h4 { font-weight: 800; color: var(--unip-blue); margin: 0; }
+    .page-header .subtitle { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+    .results-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; }
+    .results-header { padding: 1rem 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+    .results-title { font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-left: 3px solid var(--unip-blue); padding-left: 10px; margin: 0; }
+    .table { margin: 0; font-size: 0.83rem; }
+    .table thead th { background: #f8fafc; color: #475569; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; padding: 10px 16px; }
+    .table tbody td { padding: 12px 16px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .table tbody tr:last-child td { border-bottom: none; }
+    .table tbody tr:hover td { background: #f8fafc; }
+    .empty-state { text-align: center; padding: 3rem; color: #94a3b8; }
+    .empty-state i { font-size: 2rem; display: block; margin-bottom: 0.75rem; }
   </style>
 </head>
 <body>
-
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
-    <div class="container">
-      <span class="navbar-brand"><i class="bi bi-people"></i> Alunos da Turma {{ turma }}</span>
-      <a class="btn btn-outline-light btn-sm" href="/painel_unip">Voltar</a>
+<nav class="navbar navbar-dark navbar-unip shadow mb-0 py-2">
+  <div class="container d-flex justify-content-between align-items-center">
+    <a class="navbar-brand fw-bold" href="{{ url_for('painel_unip') }}"><i class="bi bi-cpu-fill me-2"></i> UNIP LAB MANAGER</a>
+    <a href="{{ url_for('painel_unip') }}" class="btn btn-sm btn-outline-light border-0 fw-bold"><i class="bi bi-arrow-left me-1"></i> Painel</a>
+  </div>
+</nav>
+<div class="page-header">
+  <div class="container">
+    <h4><i class="bi bi-people me-2"></i>Alunos — Turma {{ turma }}</h4>
+    <div class="subtitle">Lista de alunos matriculados</div>
+  </div>
+</div>
+<div class="container pb-5">
+  <div class="results-card">
+    <div class="results-header">
+      <span class="results-title"><i class="bi bi-mortarboard me-2"></i>Alunos Matriculados</span>
+      {% if alunos %}<span style="font-size:0.75rem;font-weight:700;color:white;background:var(--unip-blue);padding:3px 10px;border-radius:20px;">{{ alunos|length }} aluno{{ 's' if alunos|length != 1 }}</span>{% endif %}
     </div>
-  </nav>
-
-  <div class="container mt-4">
-    <h2>Alunos Matriculados</h2>
     {% if alunos %}
-      <table class="table table-striped">
+    <div class="table-responsive">
+      <table class="table">
         <thead>
-          <tr>
-            <th>Login</th>
-            <th>Email</th>
-            <th>Semestre</th>
-          </tr>
+          <tr><th>Nome</th><th>Login / RA</th><th>E-mail</th><th>Semestre</th></tr>
         </thead>
         <tbody>
           {% for aluno in alunos %}
           <tr>
-            <td>{{ aluno.login }}</td>
-            <td>{{ aluno.email }}</td>
-            <td>{{ aluno.semestre }}</td>
+            <td class="fw-bold">{{ aluno.nome }}</td>
+            <td class="text-muted small">{{ aluno.login }}</td>
+            <td class="small">{{ aluno.email }}</td>
+            <td class="small">{{ aluno.semestre or '—' }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
+    </div>
     {% else %}
-      <p class="text-muted">Nenhum aluno encontrado para esta turma.</p>
+    <div class="empty-state">
+      <i class="bi bi-people"></i>
+      <p class="fw-bold small">Nenhum aluno encontrado para esta turma.</p>
+    </div>
     {% endif %}
   </div>
-
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -82,12 +82,17 @@
                 <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-usuarios">Usuários</button>
               </li>
               <li class="nav-item">
-                <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-config">Labs & Turmas</button>
+                <a class="nav-link fw-bold" href="{{ url_for('admin_config') }}">Labs & Turmas</a>
               </li>
               {% endif %}
             </ul>
 
             <div class="d-flex gap-2">
+                {% if role in ['admin', 'coordenador'] %}
+                <a href="{{ url_for('relatorio_reservas') }}" class="btn btn-secondary btn-sm shadow-sm">
+                    <i class="bi bi-bar-chart-line me-1"></i> Relatório
+                </a>
+                {% endif %}
                 {% if role == 'admin' %}
                 <a href="/admin/bloqueios" class="btn btn-danger btn-sm shadow-sm">
                     <i class="bi bi-lock-fill me-1"></i> Bloqueios
@@ -181,6 +186,83 @@
                 </table>
             </div>
           </div>
+
+          <!-- ABA LABS & TURMAS -->
+          <div class="tab-pane fade" id="tab-config">
+            <div class="row g-4">
+
+              <!-- Laboratórios -->
+              <div class="col-md-6">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h5 class="fw-bold mb-0">Laboratórios</h5>
+                  <button class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalLab">
+                    <i class="bi bi-plus-lg me-1"></i> Novo Lab
+                  </button>
+                </div>
+                <div class="bg-white border rounded shadow-sm">
+                  {% if laboratorios %}
+                  <table class="table table-hover table-sm m-0 align-middle">
+                    <thead class="table-light">
+                      <tr><th class="ps-3">Nome</th><th>Capacidade</th><th class="text-end pe-3">Ações</th></tr>
+                    </thead>
+                    <tbody>
+                      {% for lab in laboratorios %}
+                      <tr>
+                        <td class="ps-3 fw-bold text-dark">{{ lab.nome }}</td>
+                        <td class="text-muted small"><i class="bi bi-people me-1"></i>{{ lab.capacidade }} alunos</td>
+                        <td class="text-end pe-3">
+                          <a href="/admin/excluir_laboratorio/{{ lab.id }}" class="btn btn-link btn-sm text-danger p-0"
+                             onclick="return confirm('Excluir laboratório {{ lab.nome }}?')">
+                            <i class="bi bi-trash"></i>
+                          </a>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                  {% else %}
+                  <div class="text-center text-muted py-4 small">
+                    <i class="bi bi-building-x d-block fs-4 mb-2"></i> Nenhum laboratório cadastrado.
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Turmas -->
+              <div class="col-md-6">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h5 class="fw-bold mb-0">Turmas</h5>
+                  <button class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTurma">
+                    <i class="bi bi-plus-lg me-1"></i> Nova Turma
+                  </button>
+                </div>
+                <div class="bg-white border rounded shadow-sm">
+                  {% if turmas %}
+                  <table class="table table-hover table-sm m-0 align-middle">
+                    <thead class="table-light">
+                      <tr><th class="ps-3">Turma</th><th>Curso</th><th>Semestre</th></tr>
+                    </thead>
+                    <tbody>
+                      {% for t in turmas %}
+                      <tr>
+                        <td class="ps-3 fw-bold text-dark">{{ t.nome }}</td>
+                        <td class="text-muted small">{{ t.curso }}</td>
+                        <td class="small">{{ t.semestre }}</td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                  {% else %}
+                  <div class="text-center text-muted py-4 small">
+                    <i class="bi bi-people d-block fs-4 mb-2"></i> Nenhuma turma cadastrada.
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
           {% endif %}
         </div>
       </div>
@@ -221,7 +303,75 @@
     </div>
   </div>
 
-  <!-- Modais permanecem conforme a sua versão original para não perder funcionalidade -->
+  <!-- Modal Novo Laboratório -->
+  <div class="modal fade" id="modalLab" tabindex="-1">
+    <div class="modal-dialog">
+      <form class="modal-content shadow border-0" action="/admin/criar_laboratorio" method="POST">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold"><i class="bi bi-building me-2"></i>Novo Laboratório</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="small fw-bold">Nome do Laboratório</label>
+            <input type="text" name="nome" class="form-control" placeholder="Ex: Laboratório 3" required>
+          </div>
+          <div class="mb-3">
+            <label class="small fw-bold">Capacidade (alunos)</label>
+            <input type="number" name="capacidade" class="form-control" placeholder="Ex: 40" min="1" required>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="submit" class="btn btn-primary px-4 shadow-sm">Criar Laboratório</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Nova Turma -->
+  <div class="modal fade" id="modalTurma" tabindex="-1">
+    <div class="modal-dialog">
+      <form class="modal-content shadow border-0" action="/admin/criar_turma" method="POST">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold"><i class="bi bi-people me-2"></i>Nova Turma</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="small fw-bold">Sigla da Turma</label>
+            <input type="text" name="nome" class="form-control" placeholder="Ex: ADS3A" required>
+          </div>
+          <div class="mb-3">
+            <label class="small fw-bold">Curso</label>
+            <select name="curso" class="form-select" required>
+              <option value="">Selecione...</option>
+              <option value="Análise e Desenvolvimento de Sistemas">Análise e Desenvolvimento de Sistemas</option>
+              <option value="Ciência da Computação">Ciência da Computação</option>
+              <option value="Direito">Direito</option>
+              <option value="Administração">Administração</option>
+              <option value="Engenharia de Software">Engenharia de Software</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="small fw-bold">Semestre</label>
+            <select name="semestre" class="form-select" required>
+              <option value="1º Semestre">1º Semestre</option>
+              <option value="2º Semestre">2º Semestre</option>
+              <option value="3º Semestre">3º Semestre</option>
+              <option value="4º Semestre">4º Semestre</option>
+              <option value="5º Semestre">5º Semestre</option>
+              <option value="6º Semestre">6º Semestre</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="submit" class="btn btn-primary px-4 shadow-sm">Criar Turma</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Novo Usuário -->
   <div class="modal fade" id="modalUsuario" tabindex="-1">
     <div class="modal-dialog">
       <form class="modal-content shadow border-0" action="/admin/criar_usuario" method="POST">

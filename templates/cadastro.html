@@ -163,9 +163,9 @@
                                         <label class="form-label small fw-bold">Turno</label>
                                         <select class="form-select" id="turno" name="turno_selecionado" onchange="gerarSigla()">
                                             <option value="" selected disabled>Turno</option>
-                                            <option value="34">Manhã</option>
-                                            <option value="34">Tarde</option>
-                                            <option value="34">Noite</option>
+                                            <option value="M">Manhã</option>
+                                            <option value="T">Tarde</option>
+                                            <option value="N">Noite</option>
                                         </select>
                                     </div>
                                 </div>
@@ -234,7 +234,7 @@
             const turno = document.getElementById('turno').value;
             
             if (curso && semestre && turno) {
-                const sigla = `${curso}${semestre}P${turno}`;
+                const sigla = curso + semestre + turno;
                 document.getElementById('preview_sigla').innerText = sigla;
                 document.getElementById('hidden_turma').value = sigla;
             }

@@ -410,9 +410,9 @@ def nova_reserva():
             db.session.rollback()
             flash(f"Erro ao salvar reserva: {str(e)}", "danger")
 
-    # Dados para carregar os selects do HTML
-    laboratorios = Laboratorio.query.all()
-    turmas = Turma.query.all()
+    # Dados para carregar os selects do HTML — só ativos/ativas
+    laboratorios = Laboratorio.query.filter_by(status='ativo').all()
+    turmas = Turma.query.filter_by(status='ativa').all()
     todos_professores = Usuario.query.filter(Usuario.role.in_(["professor", "coordenador"])).all()
 
     return render_template("nova_reserva.html", 
@@ -682,6 +682,77 @@ def excluir_laboratorio(id):
         db.session.delete(lab)
         db.session.commit()
     return redirect(url_for('painel_unip'))
+
+@app.route("/admin/config")
+def admin_config():
+    if "usuario" not in session:
+        return redirect("/login")
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not usuario_logado or usuario_logado.role != 'admin':
+        return redirect(url_for('painel_unip'))
+
+    laboratorios = Laboratorio.query.order_by(Laboratorio.nome).all()
+    turmas = Turma.query.order_by(Turma.nome).all()
+    coordenadores = Usuario.query.filter(Usuario.role.in_(['coordenador', 'admin'])).all()
+
+    return render_template("admin_config.html",
+                           usuario=usuario_logado,
+                           laboratorios=laboratorios,
+                           turmas=turmas,
+                           coordenadores=coordenadores)
+
+@app.route("/admin/editar_laboratorio/<int:id>", methods=["POST"])
+def editar_laboratorio(id):
+    if "usuario" not in session:
+        return redirect("/login")
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not usuario_logado or usuario_logado.role != 'admin':
+        return redirect(url_for('painel_unip'))
+
+    lab = Laboratorio.query.get_or_404(id)
+    lab.nome = request.form.get('nome', lab.nome)
+    lab.capacidade = int(request.form.get('capacidade', lab.capacidade))
+    lab.status = request.form.get('status', lab.status)
+    db.session.commit()
+
+    # Se entrou em manutenção, cria um BloqueioLab automático para hoje em diante
+    if lab.status == 'em_manutencao':
+        from datetime import date, timedelta
+        # Verifica se já existe bloqueio ativo para esse lab
+        bloqueio_existente = BloqueioLab.query.filter(
+            BloqueioLab.laboratorio_id == lab.id,
+            BloqueioLab.data_fim >= date.today()
+        ).first()
+        if not bloqueio_existente:
+            bloqueio = BloqueioLab(
+                laboratorio_id=lab.id,
+                data_inicio=date.today(),
+                data_fim=date.today() + timedelta(days=365),
+                motivo="Laboratório em manutenção"
+            )
+            db.session.add(bloqueio)
+            db.session.commit()
+            flash(f"{lab.nome} em manutenção! Bloqueio automático criado.", "warning")
+    else:
+        flash(f"{lab.nome} atualizado com sucesso!", "success")
+
+    return redirect(url_for('admin_config'))
+
+@app.route("/admin/editar_turma/<int:id>", methods=["POST"])
+def editar_turma(id):
+    if "usuario" not in session:
+        return redirect("/login")
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not usuario_logado or usuario_logado.role != 'admin':
+        return redirect(url_for('painel_unip'))
+
+    turma = Turma.query.get_or_404(id)
+    turma.status = request.form.get('status', turma.status)
+    coord_id = request.form.get('coordenador_id')
+    turma.coordenador_id = int(coord_id) if coord_id else None
+    db.session.commit()
+    flash(f"Turma {turma.nome} atualizada!", "success")
+    return redirect(url_for('admin_config'))
 
 @app.route("/admin/criar_turma", methods=["POST"])
 def criar_turma():

@@ -127,7 +127,7 @@
                         <div class="row align-items-center">
                             <div class="col-auto">
                                 <div class="date-container">
-                                    <div class="date-day">{{ r.data.split('/')[0] if '/' in r.data else r.data }}</div>
+                                    <div class="date-day">{{ r.data.split('-')[2] if '-' in r.data else r.data.split('/')[0] }}</div>
                                     <div class="date-month">DATA</div>
                                 </div>
                             </div>

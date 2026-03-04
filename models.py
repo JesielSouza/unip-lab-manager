@@ -14,7 +14,7 @@ class Usuario(db.Model):
     # Campos Específicos
     turma = db.Column(db.String(20), nullable=True)  # Preenchido se Aluno
     turma_id = db.Column(db.Integer, db.ForeignKey('turma.id'), nullable=True) # Relacionamento com Turma
-    turma_rel = db.relationship('Turma', backref='usuarios') # Relacionamento para facilitar consultas
+    turma_rel = db.relationship('Turma', foreign_keys=[turma_id], backref='usuarios')
     semestre = db.Column(db.String(20), nullable=True) # Preenchido se Aluno
     cargo = db.Column(db.String(50), nullable=True)  # Preenchido se Colaborador (Prof/Coord)
     
@@ -25,12 +25,16 @@ class Laboratorio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(50), unique=True, nullable=False)
     capacidade = db.Column(db.Integer, nullable=False) # Quantidade máxima de pessoas que o laboratório suporta
+    status = db.Column(db.String(20), default='ativo', nullable=False) # ativo | em_manutencao
 
 class Turma(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String(100), unique=True, nullable=False) # Ex: 1A, 2B
-    curso = db.Column(db.String(100), nullable=False)           # O que faltava
-    semestre = db.Column(db.String(20), nullable=False)        # Tua observação: Semestre
+    nome = db.Column(db.String(100), unique=True, nullable=False) # Ex: ADS3A
+    curso = db.Column(db.String(100), nullable=False)
+    semestre = db.Column(db.String(20), nullable=False)
+    status = db.Column(db.String(20), default='ativa', nullable=False) # ativa | arquivada
+    coordenador_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    coordenador = db.relationship('Usuario', foreign_keys=[coordenador_id], backref='turmas_coordenadas')
 
 class ReservaLab(db.Model):
     id = db.Column(db.Integer, primary_key=True)

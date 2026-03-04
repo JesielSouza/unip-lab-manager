@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Configurações | UNIP Lab Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <style>
+    :root {
+      --unip-blue: #003366;
+      --unip-dark: #002244;
+      --unip-gold: #f5b915;
+    }
+    body { background: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    .navbar-unip {
+      background: linear-gradient(90deg, var(--unip-dark) 0%, var(--unip-blue) 100%);
+      border-bottom: 4px solid var(--unip-gold);
+    }
+
+    .page-header {
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 1.25rem 0;
+      margin-bottom: 1.5rem;
+    }
+    .page-header h4 { font-weight: 800; color: var(--unip-blue); margin: 0; }
+    .page-header .subtitle { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+
+    .section-card {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+    .section-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-left: 3px solid var(--unip-gold);
+      padding-left: 10px;
+      margin: 0;
+    }
+
+    /* Tabela */
+    .table { margin: 0; font-size: 0.83rem; }
+    .table thead th {
+      background: #f8fafc;
+      color: #475569;
+      font-size: 0.68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #e2e8f0;
+      padding: 10px 16px;
+    }
+    .table tbody td {
+      padding: 12px 16px;
+      vertical-align: middle;
+      border-bottom: 1px solid #f1f5f9;
+      color: #334155;
+    }
+    .table tbody tr:last-child td { border-bottom: none; }
+    .table tbody tr:hover td { background: #f8fafc; }
+
+    /* Status badges */
+    .badge-ativo      { background: #dcfce7; color: #166534; font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 20px; }
+    .badge-manutencao { background: #fee2e2; color: #991b1b; font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 20px; }
+    .badge-ativa      { background: #dbeafe; color: #1e40af; font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 20px; }
+    .badge-arquivada  { background: #f1f5f9; color: #64748b; font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 20px; }
+
+    /* Alunos accordion */
+    .alunos-row { background: #f8fafc !important; }
+    .aluno-chip {
+      display: inline-block;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 0.72rem;
+      color: #334155;
+      margin: 2px;
+    }
+    .aluno-chip i { color: #94a3b8; margin-right: 4px; }
+
+    /* Botões de ação */
+    .btn-edit {
+      background: none;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      color: var(--unip-blue);
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .btn-edit:hover { background: var(--unip-blue); color: white; border-color: var(--unip-blue); }
+    .btn-expand {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 2px 6px;
+      transition: 0.2s;
+    }
+    .btn-expand:hover { color: var(--unip-blue); }
+
+    /* Modal */
+    .form-label { font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+    .form-select, .form-control {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 0.85rem;
+    }
+    .form-select:focus, .form-control:focus {
+      border-color: var(--unip-blue);
+      box-shadow: 0 0 0 3px rgba(0,51,102,0.06);
+    }
+    .btn-unip { background: var(--unip-blue); color: white; border: none; border-radius: 10px; font-weight: 700; }
+    .btn-unip:hover { background: var(--unip-dark); color: white; }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 2.5rem 1rem; color: #94a3b8; }
+    .empty-state i { font-size: 2rem; margin-bottom: 0.75rem; display: block; }
+    .empty-state p { font-size: 0.82rem; font-weight: 600; margin: 0; }
+
+    /* Stats */
+    .stat-pill {
+      background: #eff6ff;
+      color: var(--unip-blue);
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark navbar-unip shadow mb-0 py-2">
+  <div class="container d-flex justify-content-between align-items-center">
+    <a class="navbar-brand fw-bold" href="{{ url_for('painel_unip') }}">
+      <i class="bi bi-cpu-fill me-2"></i> UNIP LAB MANAGER
+    </a>
+    <div class="d-flex align-items-center gap-3">
+      <span class="text-white small"><i class="bi bi-person-circle me-1"></i>{{ usuario.nome }}</span>
+      <a href="{{ url_for('painel_unip') }}" class="btn btn-sm btn-outline-light border-0 fw-bold">
+        <i class="bi bi-arrow-left me-1"></i> Painel
+      </a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-header">
+  <div class="container">
+    <h4><i class="bi bi-sliders me-2"></i>Configurações do Sistema</h4>
+    <div class="subtitle">Gerencie laboratórios e turmas</div>
+  </div>
+</div>
+
+<div class="container pb-5">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 shadow-sm mb-3 border-0">
+          <i class="bi bi-info-circle me-2"></i>{{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- ── LABORATÓRIOS ────────────────────────────────────── -->
+  <div class="section-card">
+    <div class="section-header">
+      <span class="section-title"><i class="bi bi-building me-2"></i>Laboratórios</span>
+      <button class="btn btn-sm btn-unip px-3" data-bs-toggle="modal" data-bs-target="#modalNovoLab">
+        <i class="bi bi-plus-lg me-1"></i> Novo Lab
+      </button>
+    </div>
+
+    {% if laboratorios %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Capacidade</th>
+            <th>Status</th>
+            <th class="text-end pe-4">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for lab in laboratorios %}
+          <tr>
+            <td class="fw-bold">
+              {% if lab.status == 'em_manutencao' %}
+                <i class="bi bi-tools me-2 text-danger"></i>
+              {% else %}
+                <i class="bi bi-display me-2 text-primary"></i>
+              {% endif %}
+              {{ lab.nome }}
+            </td>
+            <td>
+              <span class="stat-pill"><i class="bi bi-people me-1"></i>{{ lab.capacidade }} alunos</span>
+            </td>
+            <td>
+              {% if lab.status == 'em_manutencao' %}
+                <span class="badge-manutencao">🔧 Em Manutenção</span>
+              {% else %}
+                <span class="badge-ativo">✓ Ativo</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-4">
+              <button class="btn-edit" data-bs-toggle="modal" data-bs-target="#modalEditLab"
+                      data-id="{{ lab.id }}"
+                      data-nome="{{ lab.nome }}"
+                      data-capacidade="{{ lab.capacidade }}"
+                      data-status="{{ lab.status }}"
+                      onclick="abrirEditLab(this)">
+                <i class="bi bi-pencil me-1"></i> Editar
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="bi bi-building-x"></i>
+      <p>Nenhum laboratório cadastrado.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── TURMAS ──────────────────────────────────────────── -->
+  <div class="section-card">
+    <div class="section-header">
+      <span class="section-title"><i class="bi bi-people me-2"></i>Turmas</span>
+      <span class="stat-pill">{{ turmas | length }} turma{{ 's' if turmas|length != 1 }}</span>
+    </div>
+
+    {% if turmas %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Turma</th>
+            <th>Curso</th>
+            <th>Semestre</th>
+            <th>Coordenador</th>
+            <th>Alunos</th>
+            <th>Status</th>
+            <th class="text-end pe-4">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in turmas %}
+          <tr>
+            <td style="width:32px;">
+              {% if t.usuarios | selectattr('role', 'eq', 'aluno') | list | length > 0 %}
+              <button class="btn-expand" onclick="toggleAlunos(this)" id="btn-expand-{{ t.id }}" data-turma-id="{{ t.id }}">
+                <i class="bi bi-chevron-right" id="icon-{{ t.id }}"></i>
+              </button>
+              {% endif %}
+            </td>
+            <td class="fw-bold">{{ t.nome }}</td>
+            <td class="text-muted small">{{ t.curso }}</td>
+            <td class="small">{{ t.semestre }}</td>
+            <td>
+              {% if t.coordenador %}
+                <span class="aluno-chip"><i class="bi bi-person-badge"></i>{{ t.coordenador.nome }}</span>
+              {% else %}
+                <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% set qtd = t.usuarios | selectattr('role', 'eq', 'aluno') | list | length %}
+              <span class="stat-pill">{{ qtd }} aluno{{ 's' if qtd != 1 }}</span>
+            </td>
+            <td>
+              {% if t.status == 'arquivada' %}
+                <span class="badge-arquivada">Arquivada</span>
+              {% else %}
+                <span class="badge-ativa">Ativa</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-4">
+              <button class="btn-edit" data-bs-toggle="modal" data-bs-target="#modalEditTurma"
+                      data-id="{{ t.id }}"
+                      data-nome="{{ t.nome }}"
+                      data-status="{{ t.status }}"
+                      data-coord="{{ t.coordenador_id or '' }}"
+                      onclick="abrirEditTurma(this)">
+                <i class="bi bi-pencil me-1"></i> Editar
+              </button>
+            </td>
+          </tr>
+          <!-- Linha expandível de alunos -->
+          <tr class="alunos-row" id="alunos-{{ t.id }}" style="display:none;">
+            <td colspan="8" class="px-4 py-3">
+              <div class="d-flex flex-wrap gap-1 align-items-center">
+                <span class="small fw-bold text-muted me-2">Alunos:</span>
+                {% set alunos = t.usuarios | selectattr('role', 'eq', 'aluno') | list %}
+                {% if alunos %}
+                  {% for a in alunos %}
+                    <span class="aluno-chip"><i class="bi bi-person"></i>{{ a.nome }} <span class="text-muted">· {{ a.login }}</span></span>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-muted small">Nenhum aluno nesta turma.</span>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="bi bi-people"></i>
+      <p>Nenhuma turma cadastrada.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Modal Novo Laboratório -->
+<div class="modal fade" id="modalNovoLab" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content shadow border-0" action="/admin/criar_laboratorio" method="POST">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold"><i class="bi bi-building me-2"></i>Novo Laboratório</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="mb-3">
+          <label class="form-label">Nome</label>
+          <input type="text" name="nome" class="form-control" placeholder="Ex: Laboratório 3" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Capacidade (alunos)</label>
+          <input type="number" name="capacidade" class="form-control" placeholder="Ex: 40" min="1" required>
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="submit" class="btn btn-unip px-4">Criar Laboratório</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Editar Laboratório -->
+<div class="modal fade" id="modalEditLab" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content shadow border-0" id="formEditLab" method="POST">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Editar Laboratório</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="mb-3">
+          <label class="form-label">Nome</label>
+          <input type="text" name="nome" id="edit_lab_nome" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Capacidade (alunos)</label>
+          <input type="number" name="capacidade" id="edit_lab_capacidade" class="form-control" min="1" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Status</label>
+          <select name="status" id="edit_lab_status" class="form-select">
+            <option value="ativo">✓ Ativo</option>
+            <option value="em_manutencao">🔧 Em Manutenção</option>
+          </select>
+          <div class="form-text text-warning mt-1" id="aviso_manutencao" style="display:none;">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Ao colocar em manutenção, um bloqueio automático será criado impedindo novas reservas.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="submit" class="btn btn-unip px-4">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Editar Turma -->
+<div class="modal fade" id="modalEditTurma" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content shadow border-0" id="formEditTurma" method="POST">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold" id="editTurmaTitle"><i class="bi bi-people me-2"></i>Editar Turma</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="mb-3">
+          <label class="form-label">Coordenador Responsável</label>
+          <select name="coordenador_id" id="edit_turma_coord" class="form-select">
+            <option value="">— Sem coordenador vinculado —</option>
+            {% for c in coordenadores %}
+            <option value="{{ c.id }}">{{ c.nome }} ({{ c.role }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Status da Turma</label>
+          <select name="status" id="edit_turma_status" class="form-select">
+            <option value="ativa">Ativa</option>
+            <option value="arquivada">Arquivada</option>
+          </select>
+          <div class="form-text mt-1">Turmas arquivadas não aparecem para seleção em novas reservas.</div>
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="submit" class="btn btn-unip px-4">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function abrirEditLab(btn) {
+    var id = btn.dataset.id;
+    var nome = btn.dataset.nome;
+    var capacidade = btn.dataset.capacidade;
+    var status = btn.dataset.status;
+    document.getElementById('formEditLab').action = '/admin/editar_laboratorio/' + id;
+    document.getElementById('edit_lab_nome').value = nome;
+    document.getElementById('edit_lab_capacidade').value = capacidade;
+    document.getElementById('edit_lab_status').value = status;
+    document.getElementById('aviso_manutencao').style.display = status === 'em_manutencao' ? 'block' : 'none';
+  }
+
+  document.getElementById('edit_lab_status').addEventListener('change', function() {
+    document.getElementById('aviso_manutencao').style.display = this.value === 'em_manutencao' ? 'block' : 'none';
+  });
+
+  function abrirEditTurma(btn) {
+    var id = btn.dataset.id;
+    var nome = btn.dataset.nome;
+    var status = btn.dataset.status;
+    var coordId = btn.dataset.coord;
+    document.getElementById('formEditTurma').action = '/admin/editar_turma/' + id;
+    document.getElementById('editTurmaTitle').innerHTML = '<i class="bi bi-people me-2"></i>Editar Turma: ' + nome;
+    document.getElementById('edit_turma_status').value = status;
+    document.getElementById('edit_turma_coord').value = coordId || '';
+  }
+
+  function toggleAlunos(btn) {
+    var turmaId = btn.dataset.turmaId;
+    var row = document.getElementById('alunos-' + turmaId);
+    var icon = document.getElementById('icon-' + turmaId);
+    var aberto = row.style.display !== 'none';
+    row.style.display = aberto ? 'none' : 'table-row';
+    icon.className = aberto ? 'bi bi-chevron-right' : 'bi bi-chevron-down';
+  }
+</script>
+</body>
+</html>

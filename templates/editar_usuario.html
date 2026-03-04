@@ -5,62 +5,112 @@
   <title>Editar Usuário | UNIP Lab Manager</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <style>
-    body { background-color: #f8f9fa; }
+    :root { --unip-blue: #003366; --unip-dark: #002244; --unip-gold: #f5b915; }
+    body { background: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .navbar-unip { background: linear-gradient(90deg, var(--unip-dark) 0%, var(--unip-blue) 100%); border-bottom: 4px solid var(--unip-gold); }
+    .page-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 1.25rem 0; margin-bottom: 1.5rem; }
+    .page-header h4 { font-weight: 800; color: var(--unip-blue); margin: 0; }
+    .page-header .subtitle { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+    .edit-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 2rem; }
+    .section-label { font-size: 0.68rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; border-left: 3px solid var(--unip-gold); padding-left: 8px; margin-bottom: 1rem; }
+    .form-label { font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+    .form-control, .form-select { border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.85rem; padding: 10px 14px; }
+    .form-control:focus, .form-select:focus { border-color: var(--unip-blue); box-shadow: 0 0 0 3px rgba(0,51,102,0.06); }
+    .btn-salvar { background: var(--unip-blue); color: white; border: none; border-radius: 10px; font-weight: 700; padding: 10px 28px; transition: 0.2s; }
+    .btn-salvar:hover { background: var(--unip-dark); color: white; }
+    #campos_aluno { display: none; }
   </style>
 </head>
 <body>
-
-<div class="container mt-5">
+<nav class="navbar navbar-dark navbar-unip shadow mb-0 py-2">
+  <div class="container d-flex justify-content-between align-items-center">
+    <a class="navbar-brand fw-bold" href="{{ url_for('painel_unip') }}"><i class="bi bi-cpu-fill me-2"></i> UNIP LAB MANAGER</a>
+    <a href="/admin/usuarios" class="btn btn-sm btn-outline-light border-0 fw-bold"><i class="bi bi-arrow-left me-1"></i> Usuários</a>
+  </div>
+</nav>
+<div class="page-header">
+  <div class="container">
+    <h4><i class="bi bi-pencil-square me-2"></i>Editar Usuário</h4>
+    <div class="subtitle">{{ user.nome }}</div>
+  </div>
+</div>
+<div class="container pb-5">
   <div class="row justify-content-center">
-    <div class="col-md-6">
-      <div class="card shadow">
-        <div class="card-body">
-          <h3 class="text-center mb-4">Editar Usuário</h3>
-          <form method="post">
-            <div class="mb-3">
-              <label class="form-label">Login</label>
+    <div class="col-md-8 col-lg-6">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 shadow-sm mb-3 border-0">
+            {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}{% endif %}
+      {% endwith %}
+      <div class="edit-card">
+        <form method="post">
+
+          <div class="section-label mb-3">Dados de Acesso</div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label">Login / RA</label>
               <input type="text" class="form-control" name="login" value="{{ user.login }}" required>
             </div>
-            <div class="mb-3">
-              <label class="form-label">Email</label>
+            <div class="col-md-6">
+              <label class="form-label">E-mail</label>
               <input type="email" class="form-control" name="email" value="{{ user.email }}" required>
             </div>
-            <div class="mb-3">
-              <label class="form-label">Role</label>
-              <select class="form-select" name="role" required>
-                <option value="aluno" {% if user.role == 'aluno' %}selected{% endif %}>Aluno</option>
-                <option value="professor" {% if user.role == 'professor' %}selected{% endif %}>Professor</option>
-                <option value="coordenador" {% if user.role == 'coordenador' %}selected{% endif %}>Coordenador de Curso</option>
-                <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
-              </select>
+            <div class="col-12">
+              <label class="form-label">Nova Senha <span class="text-muted fw-normal text-lowercase">(deixe em branco para não alterar)</span></label>
+              <input type="password" class="form-control" name="nova_senha" placeholder="••••••••">
             </div>
-            <div class="mb-3">
-              <label class="form-label">Turma</label>
-              <input type="text" class="form-control" name="turma" value="{% if user.turma %}{{ user.turma }}{% endif %}">
+          </div>
+
+          <div class="section-label mb-3">Perfil</div>
+          <div class="mb-4">
+            <label class="form-label">Cargo / Role</label>
+            <select class="form-select" name="role" id="role_select" onchange="toggleCamposAluno()">
+              <option value="aluno"       {% if user.role == 'aluno' %}selected{% endif %}>Aluno</option>
+              <option value="professor"   {% if user.role == 'professor' %}selected{% endif %}>Professor</option>
+              <option value="coordenador" {% if user.role == 'coordenador' %}selected{% endif %}>Coordenador</option>
+              <option value="admin"       {% if user.role == 'admin' %}selected{% endif %}>Administrador</option>
+            </select>
+          </div>
+
+          <div id="campos_aluno">
+            <div class="section-label mb-3">Vínculo Acadêmico</div>
+            <div class="row g-3 mb-4">
+              <div class="col-md-8">
+                <label class="form-label">Turma</label>
+                <input type="text" class="form-control" name="turma" value="{{ user.turma or '' }}" placeholder="Ex: ADS3A">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Semestre</label>
+                <select class="form-select" name="semestre">
+                  <option value="">—</option>
+                  {% for i in range(1, 7) %}
+                  <option value="{{ i }}º Semestre" {% if user.semestre == (i|string + 'º Semestre') %}selected{% endif %}>{{ i }}º Semestre</option>
+                  {% endfor %}
+                </select>
+              </div>
             </div>
-            <div class="mb-3">
-              <label class="form-label">Semestre</label>
-              <select class="form-select" name="semestre">
-                <option value="">Selecione</option>
-                <option value="1" {% if user.semestre == '1' %}selected{% endif %}>1º Semestre</option>
-                <option value="2" {% if user.semestre == '2' %}selected{% endif %}>2º Semestre</option>
-                <option value="3" {% if user.semestre == '3' %}selected{% endif %}>3º Semestre</option>
-                <option value="4" {% if user.semestre == '4' %}selected{% endif %}>4º Semestre</option>
-                <option value="5" {% if user.semestre == '5' %}selected{% endif %}>5º Semestre</option>
-                <option value="6" {% if user.semestre == '6' %}selected{% endif %}>6º Semestre</option>
-              </select>
-            </div>
-            <div class="d-grid gap-2">
-              <button type="submit" class="btn btn-primary">Salvar</button>
-              <a href="/admin/usuarios" class="btn btn-light border">Voltar</a>
-            </div>
-          </form>
-        </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-salvar"><i class="bi bi-check-lg me-1"></i> Salvar</button>
+            <a href="/admin/usuarios" class="btn btn-light border rounded-3">Cancelar</a>
+          </div>
+        </form>
       </div>
     </div>
   </div>
 </div>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function toggleCamposAluno() {
+    var role = document.getElementById('role_select').value;
+    document.getElementById('campos_aluno').style.display = role === 'aluno' ? 'block' : 'none';
+  }
+  window.onload = toggleCamposAluno;
+</script>
 </body>
 </html>

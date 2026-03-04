@@ -2,76 +2,102 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Gerenciar Usuários | UNIP Lab Manager</title>
+  <title>Usuários | UNIP Lab Manager</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <style>
-    body { background-color: #f8f9fa; }
-    .navbar-admin { background-color: #0d6efd !important; border-bottom: 3px solid #f5b915; }
+    :root { --unip-blue: #003366; --unip-dark: #002244; --unip-gold: #f5b915; }
+    body { background: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .navbar-unip { background: linear-gradient(90deg, var(--unip-dark) 0%, var(--unip-blue) 100%); border-bottom: 4px solid var(--unip-gold); }
+    .page-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 1.25rem 0; margin-bottom: 1.5rem; }
+    .page-header h4 { font-weight: 800; color: var(--unip-blue); margin: 0; }
+    .page-header .subtitle { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+    .results-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; }
+    .results-header { padding: 1rem 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+    .results-title { font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-left: 3px solid var(--unip-blue); padding-left: 10px; margin: 0; }
+    .table { margin: 0; font-size: 0.83rem; }
+    .table thead th { background: #f8fafc; color: #475569; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; padding: 10px 16px; }
+    .table tbody td { padding: 12px 16px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .table tbody tr:hover td { background: #f8fafc; }
+    .table tbody tr:last-child td { border-bottom: none; }
+    .role-badge { font-size: 0.65rem; font-weight: 800; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; }
+    .role-admin { background: #fef3c7; color: #92400e; }
+    .role-coordenador { background: #dbeafe; color: #1e40af; }
+    .role-professor { background: #dcfce7; color: #166534; }
+    .role-aluno { background: #f1f5f9; color: #475569; }
+    .btn-edit { background: none; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px 10px; font-size: 0.72rem; color: var(--unip-blue); cursor: pointer; transition: 0.15s; text-decoration: none; }
+    .btn-edit:hover { background: var(--unip-blue); color: white; border-color: var(--unip-blue); }
+    .btn-del { background: none; border: 1px solid #fee2e2; border-radius: 8px; padding: 4px 10px; font-size: 0.72rem; color: #991b1b; cursor: pointer; transition: 0.15s; text-decoration: none; }
+    .btn-del:hover { background: #fee2e2; color: #991b1b; }
+    .btn-unip { background: var(--unip-blue); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 0.82rem; padding: 8px 18px; }
+    .btn-unip:hover { background: var(--unip-dark); color: white; }
   </style>
 </head>
 <body>
-
-  <nav class="navbar navbar-expand-lg navbar-dark navbar-admin shadow mb-4">
-    <div class="container">
-      <span class="navbar-brand fw-bold"><i class="bi bi-person-circle"></i> Admin: {{ usuario_logado }}</span>
-      <div class="d-flex gap-2">
-          <a class="btn btn-outline-light btn-sm" href="/painel_unip">Painel</a>
-          
-          <a class="btn btn-warning btn-sm fw-bold text-dark" href="/admin/bloqueios">
-              <i class="bi bi-lock-fill"></i> Gerenciar Bloqueios
-          </a>
-          
-          <a class="btn btn-outline-warning btn-sm" href="/admin/perfil">Meu Perfil</a>
-          <a class="btn btn-outline-light btn-sm" href="/logout">Sair</a>
+<nav class="navbar navbar-dark navbar-unip shadow mb-0 py-2">
+  <div class="container d-flex justify-content-between align-items-center">
+    <a class="navbar-brand fw-bold" href="{{ url_for('painel_unip') }}"><i class="bi bi-cpu-fill me-2"></i> UNIP LAB MANAGER</a>
+    <a href="{{ url_for('painel_unip') }}" class="btn btn-sm btn-outline-light border-0 fw-bold"><i class="bi bi-arrow-left me-1"></i> Painel</a>
+  </div>
+</nav>
+<div class="page-header">
+  <div class="container d-flex justify-content-between align-items-center">
+    <div>
+      <h4><i class="bi bi-people me-2"></i>Gerenciar Usuários</h4>
+      <div class="subtitle">Visualize e edite os usuários do sistema</div>
+    </div>
+    <a href="/cadastro" class="btn btn-unip"><i class="bi bi-person-plus me-1"></i> Novo Usuário</a>
+  </div>
+</div>
+<div class="container pb-5">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 shadow-sm mb-3 border-0">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+  <div class="results-card">
+    <div class="results-header">
+      <span class="results-title"><i class="bi bi-people me-2"></i>Usuários Cadastrados</span>
+      <span style="font-size:0.75rem;font-weight:700;color:white;background:var(--unip-blue);padding:3px 10px;border-radius:20px;">{{ usuarios|length }} usuário{{ 's' if usuarios|length != 1 }}</span>
     </div>
-  </nav>
-
-  <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-people"></i> Gerenciar Usuários</h2>
-        <a href="/cadastro" class="btn btn-success shadow-sm">+ Novo Usuário</a>
-    </div>
-
-    <div class="table-responsive bg-white rounded shadow-sm">
-        <table class="table table-striped table-hover align-middle mb-0">
-          <thead class="table-dark">
-            <tr>
-              <th>ID</th>
-              <th>Login</th>
-              <th>Email</th>
-              <th>Cargo</th>
-              <th>Turma</th>
-              <th>Semestre</th>
-              <th class="text-center">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for u in usuarios %}
-            <tr>
-              <td class="text-muted small">#{{ u.id }}</td>
-              <td class="fw-bold">{{ u.login }}</td>
-              <td>{{ u.email }}</td>
-              <td><span class="badge bg-primary">{{ u.role }}</span></td>
-              <td>{{ u.turma or '' }}</td>
-              <td>{{ u.semestre or '' }}</td>
-              <td class="text-center">
-                {% if u.role != 'admin' %}
-                <div class="btn-group">
-                    <a href="/admin/editar_usuario/{{ u.id }}" class="btn btn-sm btn-outline-primary">Editar</a>
-                    <a href="/admin/excluir_usuario/{{ u.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Excluir usuário?')">Excluir</a>
-                </div>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Login / RA</th>
+            <th>E-mail</th>
+            <th>Cargo</th>
+            <th>Turma</th>
+            <th class="text-end pe-4">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in usuarios %}
+          <tr>
+            <td class="fw-bold">{{ u.nome }}</td>
+            <td class="text-muted small">{{ u.login }}</td>
+            <td class="small">{{ u.email }}</td>
+            <td>
+              <span class="role-badge role-{{ u.role }}">{{ u.role }}</span>
+            </td>
+            <td class="small text-muted">{{ u.turma_rel.nome if u.turma_rel else '—' }}</td>
+            <td class="text-end pe-4">
+              {% if u.role != 'admin' %}
+              <a href="/admin/editar_usuario/{{ u.id }}" class="btn-edit me-1"><i class="bi bi-pencil me-1"></i>Editar</a>
+              <a href="/admin/excluir_usuario/{{ u.id }}" class="btn-del" onclick="return confirm('Excluir {{ u.nome }}?')"><i class="bi bi-trash"></i></a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
