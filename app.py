@@ -8,34 +8,39 @@ from flask_migrate import Migrate
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import threading
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-troque-em-producao")
 
 # ── FUNÇÃO DE EMAIL ──────────────────────────────────────────
-def enviar_email(destinatario, assunto, corpo_html):
-    """Envia email via Gmail SMTP. Falha silenciosa se não configurado."""
+def _enviar_email_worker(destinatario, assunto, corpo_html):
+    """Worker interno que envia o email. Roda em thread separada."""
     mail_user = os.environ.get("MAIL_USER")
     mail_pass = os.environ.get("MAIL_PASSWORD")
     if not mail_user or not mail_pass or not destinatario:
-        return False
+        return
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = assunto
         msg["From"] = f"UNIP Lab Manager <{mail_user}>"
         msg["To"] = destinatario
         msg.attach(MIMEText(corpo_html, "html"))
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
             server.ehlo()
             server.starttls()
             server.login(mail_user, mail_pass)
             server.sendmail(mail_user, destinatario, msg.as_string())
-        return True
+        print(f"[EMAIL] Enviado para {destinatario}")
     except Exception as e:
         import traceback
         print(f"[EMAIL] Erro ao enviar para {destinatario}: {e}")
         print(f"[EMAIL] Traceback: {traceback.format_exc()}")
-        return False
+
+def enviar_email(destinatario, assunto, corpo_html):
+    """Envia email em thread separada para não bloquear a requisição."""
+    t = threading.Thread(target=_enviar_email_worker, args=(destinatario, assunto, corpo_html), daemon=True)
+    t.start()
 app.config['JSON_AS_ASCII'] = False # Correção para exibir acentos corretamente no JSON
 
 # CONFIGURAÇÃO DO BANCO — usa DATABASE_URL em produção, SQLite em dev
