@@ -129,10 +129,10 @@
                         <td class="text-center">
                             <div class="d-flex justify-content-center gap-2">
                                 {# LOGICA DE BOTÕES: Coordenador aprova Pending, Admin aprova tudo o que não for final #}
-                                {% if (usuario_logado.role == 'coordenador' and r.status == 'pending') or (usuario_logado.role == 'admin') %}
+                                {% if (usuario_logado.role == 'coordenador' and r.status == 'pending') or (usuario_logado.role in ['admin', 'super_admin']) %}
                                 <a href="{{ url_for('aprovar_reserva', id=r.id) }}" class="btn btn-action btn-approve">
                                     <i class="bi bi-check-all me-1"></i> 
-                                    {% if usuario_logado.role == 'admin' %} APROVAR FINAL {% else %} PRÉ-APROVAR {% endif %}
+                                    {% if usuario_logado.role in ['admin', 'super_admin'] %} APROVAR FINAL {% else %} PRÉ-APROVAR {% endif %}
                                 </a>
                                 {% endif %}
 
