@@ -6,12 +6,20 @@ import os
 import bcrypt
 from flask_migrate import Migrate
 import smtplib
+from datetime import timedelta
+import secrets
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import threading
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-troque-em-producao")
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# Armazena token ativo por login (sessão única)
+_sessoes_ativas = {}
 
 # ── FUNÇÃO DE EMAIL ──────────────────────────────────────────
 def _enviar_email_worker(destinatario, assunto, corpo_html):
@@ -123,6 +131,41 @@ def is_super_admin(usuario):
     return usuario and usuario.role == 'super_admin'
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ── CONTROLE DE SESSÃO ───────────────────────────────────────────────────────
+@app.before_request
+def verificar_sessao():
+    """Verifica timeout de inatividade e sessão única."""
+    rotas_livres = ['login', 'cadastro', 'static']
+    if request.endpoint in rotas_livres:
+        return
+
+    if 'usuario' not in session:
+        return
+
+    # Timeout por inatividade (20 min)
+    ultimo_acesso = session.get('ultimo_acesso')
+    agora = datetime.utcnow().timestamp()
+    if ultimo_acesso and (agora - ultimo_acesso) > 1200:  # 1200s = 20 min
+        login_expirado = session.get('usuario')
+        session.clear()
+        _sessoes_ativas.pop(login_expirado, None)
+        flash("Sua sessão expirou por inatividade. Faça login novamente.", "warning")
+        return redirect(url_for('login'))
+
+    session['ultimo_acesso'] = agora
+    session.modified = True
+
+    # Sessão única — verifica se o token ainda é válido
+    login_atual = session.get('usuario')
+    token_sessao = session.get('token_sessao')
+    if login_atual and token_sessao:
+        token_ativo = _sessoes_ativas.get(login_atual)
+        if token_ativo and token_ativo != token_sessao:
+            session.clear()
+            flash("Sua conta foi acessada em outro dispositivo. Sessão encerrada.", "danger")
+            return redirect(url_for('login'))
+# ─────────────────────────────────────────────────────────────────────────────
+
 # ── AUDITORIA ────────────────────────────────────────────────────────────────
 def registrar_log(acao, descricao):
     """Registra uma ação de auditoria e limpa logs com mais de 30 dias."""
@@ -218,8 +261,13 @@ def login():
             return render_template("login.html")
 
         if bcrypt.checkpw(senha_form.encode(), usuario.senha_hash.encode()):
-            session.clear() # Limpa resquícios de sessões antigas/inválidas
+            session.clear()
+            token = secrets.token_hex(32)
             session["usuario"] = usuario.login
+            session["token_sessao"] = token
+            session["ultimo_acesso"] = datetime.utcnow().timestamp()
+            session.permanent = True
+            _sessoes_ativas[usuario.login] = token
             registrar_log("LOGIN", f"Login realizado por {usuario.nome} ({usuario.role})")
             return redirect("/painel_unip")
         else:
@@ -1186,6 +1234,8 @@ def admin_logs():
 @app.route("/logout")
 def logout():
     registrar_log("LOGOUT", f"Logout realizado")
+    login_saindo = session.get('usuario')
+    _sessoes_ativas.pop(login_saindo, None)
     session.clear()
     return redirect("/login")
 
