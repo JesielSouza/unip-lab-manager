@@ -25,7 +25,9 @@ def enviar_email(destinatario, assunto, corpo_html):
         msg["From"] = f"UNIP Lab Manager <{mail_user}>"
         msg["To"] = destinatario
         msg.attach(MIMEText(corpo_html, "html"))
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.ehlo()
+            server.starttls()
             server.login(mail_user, mail_pass)
             server.sendmail(mail_user, destinatario, msg.as_string())
         return True
