@@ -32,7 +32,9 @@ def enviar_email(destinatario, assunto, corpo_html):
             server.sendmail(mail_user, destinatario, msg.as_string())
         return True
     except Exception as e:
-        print(f"[EMAIL] Erro ao enviar: {e}")
+        import traceback
+        print(f"[EMAIL] Erro ao enviar para {destinatario}: {e}")
+        print(f"[EMAIL] Traceback: {traceback.format_exc()}")
         return False
 app.config['JSON_AS_ASCII'] = False # Correção para exibir acentos corretamente no JSON
 
