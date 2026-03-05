@@ -23,6 +23,7 @@
     .table tbody tr:last-child td { border-bottom: none; }
     .role-badge { font-size: 0.65rem; font-weight: 800; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; }
     .role-admin { background: #fef3c7; color: #92400e; }
+    .role-super_admin { background: #003366; color: #f5b915; }
     .role-coordenador { background: #dbeafe; color: #1e40af; }
     .role-professor { background: #dcfce7; color: #166534; }
     .role-aluno { background: #f1f5f9; color: #475569; }
@@ -47,7 +48,7 @@
       <h4><i class="bi bi-people me-2"></i>Gerenciar Usuários</h4>
       <div class="subtitle">Visualize e edite os usuários do sistema</div>
     </div>
-    <a href="/cadastro" class="btn btn-unip"><i class="bi bi-person-plus me-1"></i> Novo Usuário</a>
+    <button class="btn btn-unip" data-bs-toggle="modal" data-bs-target="#modalNovoUsuario"><i class="bi bi-person-plus me-1"></i> Novo Usuário</button>
   </div>
 </div>
 <div class="container pb-5">
@@ -86,9 +87,11 @@
             </td>
             <td class="small text-muted">{{ u.turma_rel.nome if u.turma_rel else '—' }}</td>
             <td class="text-end pe-4">
-              {% if u.role != 'admin' %}
+              {% if u.role not in ['admin', 'super_admin'] or (usuario_logado.role == 'super_admin' and u.role == 'admin') %}
               <a href="/admin/editar_usuario/{{ u.id }}" class="btn-edit me-1"><i class="bi bi-pencil me-1"></i>Editar</a>
+              {% if u.role != 'super_admin' %}
               <a href="/admin/excluir_usuario/{{ u.id }}" class="btn-del" onclick="return confirm('Excluir {{ u.nome }}?')"><i class="bi bi-trash"></i></a>
+              {% endif %}
               {% endif %}
             </td>
           </tr>
@@ -98,6 +101,85 @@
     </div>
   </div>
 </div>
+<!-- Modal Novo Usuário -->
+<div class="modal fade" id="modalNovoUsuario" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-4 border-0 shadow">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" style="color:var(--unip-blue)"><i class="bi bi-person-plus me-2"></i>Novo Usuário</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="/admin/criar_usuario" method="POST">
+        <div class="modal-body px-4">
+          <div class="mb-3">
+            <label class="form-label">Nome Completo</label>
+            <input type="text" class="form-control" name="nome" required>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Login / RA</label>
+              <input type="text" class="form-control" name="login" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">E-mail</label>
+              <input type="email" class="form-control" name="email" required>
+            </div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Cargo / Role</label>
+              <select class="form-select" name="role" id="modal_role" onchange="toggleModalAluno()">
+                <option value="professor">Professor</option>
+                <option value="coordenador">Coordenador</option>
+                <option value="aluno">Aluno</option>
+                {% if usuario_logado.role == 'super_admin' %}
+                <option value="admin">Administrador</option>
+                {% endif %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Senha</label>
+              <input type="password" class="form-control" name="senha" required>
+            </div>
+          </div>
+          <div id="modal_campos_aluno" style="display:none;">
+            <div class="row g-2 mb-3">
+              <div class="col-md-8">
+                <label class="form-label">Turma</label>
+                <select class="form-select" name="turma_id">
+                  <option value="">Selecione...</option>
+                  {% for t in turmas %}
+                  <option value="{{ t.id }}">{{ t.nome }} — {{ t.curso }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Semestre</label>
+                <select class="form-select" name="semestre">
+                  <option value="">—</option>
+                  {% for i in range(1, 7) %}
+                  <option value="{{ i }}º Semestre">{{ i }}º</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4">
+          <button type="button" class="btn btn-light border rounded-3" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-unip"><i class="bi bi-check-lg me-1"></i>Criar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleModalAluno() {
+  var role = document.getElementById('modal_role').value;
+  document.getElementById('modal_campos_aluno').style.display = role === 'aluno' ? 'block' : 'none';
+}
+</script>
 </body>
 </html>

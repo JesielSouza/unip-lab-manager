@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash
+from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -68,3 +69,11 @@ class BloqueioLab(db.Model):
 
     # Relacionamento com Laboratorio para uso em templates (b.lab_rel.nome)
     lab_rel = db.relationship('Laboratorio', backref='bloqueios')
+
+class LogAuditoria(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    usuario_login = db.Column(db.String(50), nullable=False)   # quem fez a ação
+    acao = db.Column(db.String(50), nullable=False)            # LOGIN, LOGOUT, CRIAR_RESERVA, etc.
+    descricao = db.Column(db.String(255), nullable=False)      # detalhe legível
+    ip = db.Column(db.String(45), nullable=True)               # IPv4 ou IPv6

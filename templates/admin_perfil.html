@@ -35,7 +35,10 @@
 <div class="page-header">
   <div class="container">
     <h4><i class="bi bi-person-circle me-2"></i>Meu Perfil</h4>
-    <div class="subtitle">Gerencie suas credenciais de acesso</div>
+    <div class="subtitle">
+      {% if usuario.role == 'super_admin' %}⭐ Super Admin — acesso total ao sistema
+      {% else %}Administrador — auxiliar operacional{% endif %}
+    </div>
   </div>
 </div>
 <div class="container pb-5">
@@ -53,7 +56,13 @@
         <div class="profile-header">
           <img src="https://ui-avatars.com/api/?name={{ usuario.nome }}&background=f5b915&color=003366&size=100" class="avatar" alt="Avatar">
           <div class="text-white fw-bold">{{ usuario.nome }}</div>
-          <div class="mt-1"><span class="role-badge">{{ usuario.role }}</span></div>
+          <div class="mt-1">
+            {% if usuario.role == 'super_admin' %}
+              <span class="role-badge" style="background:#f5b915;color:#003366;">⭐ SUPER ADMIN</span>
+            {% else %}
+              <span class="role-badge">ADMINISTRADOR</span>
+            {% endif %}
+          </div>
         </div>
         <form method="post" class="form-section">
           <div class="mb-3">

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Logs de Auditoria | UNIP Lab Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <style>
+    :root { --unip-blue: #003366; --unip-dark: #002244; --unip-gold: #f5b915; }
+    body { background: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .navbar-unip { background: linear-gradient(90deg, var(--unip-dark) 0%, var(--unip-blue) 100%); border-bottom: 4px solid var(--unip-gold); }
+    .page-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 1.25rem 0; margin-bottom: 1.5rem; }
+    .page-header h4 { font-weight: 800; color: var(--unip-blue); margin: 0; }
+    .page-header .subtitle { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+    .results-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; }
+    .results-header { padding: 1rem 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+    .results-title { font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-left: 3px solid var(--unip-blue); padding-left: 10px; margin: 0; }
+    .table { margin: 0; font-size: 0.82rem; }
+    .table thead th { background: #f8fafc; color: #475569; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; padding: 10px 16px; }
+    .table tbody td { padding: 11px 16px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .table tbody tr:hover td { background: #f8fafc; }
+    .table tbody tr:last-child td { border-bottom: none; }
+
+    /* Badges por tipo de ação */
+    .acao-badge { font-size: 0.62rem; font-weight: 800; padding: 3px 9px; border-radius: 20px; text-transform: uppercase; white-space: nowrap; }
+    .acao-LOGIN        { background: #dcfce7; color: #166534; }
+    .acao-LOGOUT       { background: #f1f5f9; color: #475569; }
+    .acao-CRIAR_USUARIO   { background: #dbeafe; color: #1e40af; }
+    .acao-EDITAR_USUARIO  { background: #e0f2fe; color: #0369a1; }
+    .acao-EXCLUIR_USUARIO { background: #fee2e2; color: #991b1b; }
+    .acao-CRIAR_RESERVA   { background: #ede9fe; color: #5b21b6; }
+    .acao-APROVAR_RESERVA { background: #dcfce7; color: #166534; }
+    .acao-PRE_APROVAR_RESERVA { background: #dbeafe; color: #1e40af; }
+    .acao-REJEITAR_RESERVA { background: #fee2e2; color: #991b1b; }
+    .acao-CRIAR_BLOQUEIO  { background: #fff7ed; color: #c2410c; }
+    .acao-EXCLUIR_BLOQUEIO { background: #f1f5f9; color: #475569; }
+
+    .filter-bar { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+    .empty-state { text-align: center; padding: 3rem; color: #94a3b8; }
+    .empty-state i { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-dark navbar-unip shadow mb-0 py-2">
+  <div class="container d-flex justify-content-between align-items-center">
+    <a class="navbar-brand fw-bold" href="{{ url_for('painel_unip') }}"><i class="bi bi-cpu-fill me-2"></i> UNIP LAB MANAGER</a>
+    <a href="{{ url_for('painel_unip') }}" class="btn btn-sm btn-outline-light border-0 fw-bold"><i class="bi bi-arrow-left me-1"></i> Painel</a>
+  </div>
+</nav>
+
+<div class="page-header">
+  <div class="container d-flex justify-content-between align-items-center">
+    <div>
+      <h4><i class="bi bi-journal-text me-2"></i>Logs de Auditoria</h4>
+      <div class="subtitle">Últimos 30 dias · Máximo 500 registros exibidos</div>
+    </div>
+    <span style="font-size:0.75rem;font-weight:700;color:white;background:var(--unip-blue);padding:4px 12px;border-radius:20px;">
+      {{ logs|length }} registro{{ 's' if logs|length != 1 }}
+    </span>
+  </div>
+</div>
+
+<div class="container pb-5">
+
+  <!-- Filtro client-side -->
+  <div class="filter-bar d-flex gap-3 align-items-center flex-wrap">
+    <div>
+      <label class="form-label" style="font-size:0.7rem;font-weight:800;color:#64748b;text-transform:uppercase;">Buscar</label>
+      <input type="text" id="filtro_busca" class="form-control form-control-sm" placeholder="Usuário, ação ou descrição..." style="min-width:260px;" oninput="filtrarLogs()">
+    </div>
+    <div>
+      <label class="form-label" style="font-size:0.7rem;font-weight:800;color:#64748b;text-transform:uppercase;">Ação</label>
+      <select id="filtro_acao" class="form-select form-select-sm" onchange="filtrarLogs()" style="min-width:180px;">
+        <option value="">Todas</option>
+        <option value="LOGIN">Login</option>
+        <option value="LOGOUT">Logout</option>
+        <option value="CRIAR_USUARIO">Criar Usuário</option>
+        <option value="EDITAR_USUARIO">Editar Usuário</option>
+        <option value="EXCLUIR_USUARIO">Excluir Usuário</option>
+        <option value="CRIAR_RESERVA">Criar Reserva</option>
+        <option value="APROVAR_RESERVA">Aprovar Reserva</option>
+        <option value="PRE_APROVAR_RESERVA">Pré-Aprovar</option>
+        <option value="REJEITAR_RESERVA">Rejeitar Reserva</option>
+        <option value="CRIAR_BLOQUEIO">Criar Bloqueio</option>
+        <option value="EXCLUIR_BLOQUEIO">Excluir Bloqueio</option>
+      </select>
+    </div>
+    <div class="ms-auto align-self-end">
+      <button class="btn btn-sm btn-light border" onclick="limparFiltros()"><i class="bi bi-x-lg me-1"></i>Limpar</button>
+    </div>
+  </div>
+
+  <div class="results-card">
+    <div class="results-header">
+      <span class="results-title"><i class="bi bi-list-ul me-2"></i>Registro de Atividades</span>
+    </div>
+
+    {% if logs %}
+    <div class="table-responsive">
+      <table class="table" id="tabela_logs">
+        <thead>
+          <tr>
+            <th>Data / Hora</th>
+            <th>Usuário</th>
+            <th>Ação</th>
+            <th>Descrição</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td class="text-muted small" style="white-space:nowrap;">
+              {{ log.timestamp.strftime('%d/%m/%Y %H:%M:%S') }}
+            </td>
+            <td class="fw-bold">{{ log.usuario_login }}</td>
+            <td>
+              <span class="acao-badge acao-{{ log.acao }}">{{ log.acao.replace('_', ' ') }}</span>
+            </td>
+            <td class="text-secondary small">{{ log.descricao }}</td>
+            <td class="text-muted small">{{ log.ip or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="bi bi-journal-x"></i>
+      <p class="fw-bold small">Nenhum log registrado ainda.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function filtrarLogs() {
+  const busca = document.getElementById('filtro_busca').value.toLowerCase();
+  const acao = document.getElementById('filtro_acao').value.toLowerCase();
+  const linhas = document.querySelectorAll('#tabela_logs tbody tr');
+
+  linhas.forEach(tr => {
+    const texto = tr.innerText.toLowerCase();
+    const acaoCell = tr.cells[2]?.innerText.toLowerCase() || '';
+    const matchBusca = !busca || texto.includes(busca);
+    const matchAcao = !acao || acaoCell.includes(acao.replace('_', ' '));
+    tr.style.display = (matchBusca && matchAcao) ? '' : 'none';
+  });
+}
+
+function limparFiltros() {
+  document.getElementById('filtro_busca').value = '';
+  document.getElementById('filtro_acao').value = '';
+  filtrarLogs();
+}
+</script>
+</body>
+</html>

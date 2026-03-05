@@ -81,7 +81,14 @@
             <div class="row g-3 mb-4">
               <div class="col-md-8">
                 <label class="form-label">Turma</label>
-                <input type="text" class="form-control" name="turma" value="{{ user.turma or '' }}" placeholder="Ex: ADS3A">
+                <select class="form-select" name="turma_id">
+                  <option value="">Selecione a turma...</option>
+                  {% for t in turmas %}
+                  <option value="{{ t.id }}" {% if user.turma_id == t.id %}selected{% endif %}>
+                    {{ t.nome }} — {{ t.curso }}
+                  </option>
+                  {% endfor %}
+                </select>
               </div>
               <div class="col-md-4">
                 <label class="form-label">Semestre</label>

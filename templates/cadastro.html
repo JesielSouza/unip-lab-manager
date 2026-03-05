@@ -113,7 +113,7 @@
                             <div class="row g-2">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label small fw-bold" id="label_login">RA</label>
-                                    <input type="text" name="login" class="form-control" placeholder="Apenas números" required>
+                                    <input type="text" name="login" id="input_login" class="form-control" placeholder="Apenas números" required>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label small fw-bold">E-mail Acadêmico</label>
@@ -137,26 +137,25 @@
                                 <div class="row g-2">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label small fw-bold">Curso</label>
-                                        <select class="form-select" id="curso" name="curso" onchange="gerarSigla()">
+                                        <select class="form-select" id="curso" name="curso" onchange="atualizarSemestres()">
                                             <option value="" selected disabled>Selecione seu curso</option>
-                                            <option value="DS">Análise e Desenv. de Sistemas</option>
-                                            <option value="AI">Automação Industrial</option>
-                                            <option value="EC">Engenharia de Computação</option>
-                                            <option value="CC">Ciência da Computação</option>
-                                            <option value="DR">Direito</option>
-                                            <option value="AD">Administração</option>
+                                            <option value="DS" data-max="5">Análise e Desenv. de Sistemas</option>
+                                            <option value="AI" data-max="6">Automação Industrial</option>
+                                            <option value="EC" data-max="10">Engenharia de Computação</option>
+                                            <option value="CC" data-max="8">Ciência da Computação</option>
+                                            <option value="DR" data-max="10">Direito</option>
+                                            <option value="AD" data-max="8">Administração</option>
+                                            <option value="PS" data-max="10">Psicologia</option>
+                                            <option value="EN" data-max="10">Enfermagem</option>
+                                            <option value="FS" data-max="10">Fisioterapia</option>
+                                            <option value="NU" data-max="8">Nutrição</option>
+                                            <option value="FA" data-max="10">Farmácia</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3 mb-3">
                                         <label class="form-label small fw-bold">Semestre</label>
-                                        <select class="form-select" id="semestre" name="semestre" onchange="gerarSigla()">
-                                            <option value="" selected disabled>Sem.</option>
-                                            <option value="1">1º</option>
-                                            <option value="2">2º</option>
-                                            <option value="3">3º</option>
-                                            <option value="4">4º</option>
-                                            <option value="5">5º</option>
-                                            <option value="6">6º</option>
+                                        <select class="form-select" id="semestre" name="semestre" onchange="gerarSigla()" disabled>
+                                            <option value="" selected disabled>Selecione o curso primeiro</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3 mb-3">
@@ -228,15 +227,39 @@
         });
 
         // Geração da Sigla (Corrigida)
+        // Padrão UNIP: CURSO + SEMESTRE + P + 34 (ex: DS3P34)
+        function atualizarSemestres() {
+            const cursoSelect = document.getElementById('curso');
+            const semestreSelect = document.getElementById('semestre');
+            const selected = cursoSelect.options[cursoSelect.selectedIndex];
+            const max = parseInt(selected.getAttribute('data-max') || 0);
+
+            semestreSelect.innerHTML = '<option value="" selected disabled>Sem.</option>';
+            if (max > 0) {
+                for (let i = 1; i <= max; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.innerText = i + 'º';
+                    semestreSelect.appendChild(opt);
+                }
+                semestreSelect.disabled = false;
+            } else {
+                semestreSelect.disabled = true;
+            }
+            gerarSigla();
+        }
+
         function gerarSigla() {
             const curso = document.getElementById('curso').value;
             const semestre = document.getElementById('semestre').value;
-            const turno = document.getElementById('turno').value;
-            
-            if (curso && semestre && turno) {
-                const sigla = curso + semestre + turno;
+
+            if (curso && semestre) {
+                const sigla = curso + semestre + 'P34';
                 document.getElementById('preview_sigla').innerText = sigla;
                 document.getElementById('hidden_turma').value = sigla;
+            } else {
+                document.getElementById('preview_sigla').innerText = '--';
+                document.getElementById('hidden_turma').value = '';
             }
         }
 
@@ -245,20 +268,27 @@
             const camposAluno = document.getElementById('campos_aluno');
             const camposColab = document.getElementById('campos_colaborador');
             const labelLogin = document.getElementById('label_login');
-            
+            const inputLogin = document.getElementById('input_login');
+
             if (role === 'aluno') {
                 camposAluno.style.display = 'block';
                 camposColab.style.display = 'none';
                 labelLogin.innerText = "RA (Matrícula)";
-                
+                inputLogin.placeholder = "Apenas números";
+                inputLogin.pattern = "[0-9]+";
+                inputLogin.title = "O RA deve conter apenas números";
+
                 document.getElementById('curso').required = true;
                 document.getElementById('semestre').required = true;
-                document.getElementById('turno').required = true;
+                document.getElementById('turno').required = false;
             } else {
                 camposAluno.style.display = 'none';
                 camposColab.style.display = 'block';
                 labelLogin.innerText = "ID / Registro Funcional";
-                
+                inputLogin.placeholder = "ID funcional";
+                inputLogin.removeAttribute('pattern');
+                inputLogin.removeAttribute('title');
+
                 document.getElementById('curso').required = false;
                 document.getElementById('semestre').required = false;
                 document.getElementById('turno').required = false;
@@ -269,9 +299,17 @@
             const senha = document.getElementById('senha').value;
             const confirma = document.getElementById('confirma_senha').value;
             if (senha !== confirma) {
-                alert("As senhas não conferem!"); 
+                alert("As senhas não conferem!");
                 return false;
             }
+
+            const role = document.querySelector('input[name="role"]:checked').value;
+            const login = document.getElementById('input_login').value;
+            if (role === 'aluno' && !/^[0-9]+$/.test(login)) {
+                alert("O RA deve conter apenas números!");
+                return false;
+            }
+
             return true;
         }
 

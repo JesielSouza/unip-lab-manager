@@ -1,5 +1,5 @@
 from sqlalchemy import or_
-from models import ReservaLab, db, Usuario, Laboratorio, Turma, BloqueioLab
+from models import ReservaLab, db, Usuario, Laboratorio, Turma, BloqueioLab, LogAuditoria
 from flask import Flask, jsonify, render_template, request, redirect, session, url_for, flash
 from datetime import datetime
 import os
@@ -50,23 +50,28 @@ def inicializar_unidade():
         else:
             db.session.add(Laboratorio(nome=lab_data["nome"], capacidade=lab_data["capacidade"]))
 
-    # --- PARTE 2: ADMINISTRADOR (AJUSTADA COM O CAMPO NOME) ---
+    # --- PARTE 2: SUPER_ADMIN ---
     if not Usuario.query.filter_by(login="admin").first():
-        # Usando a lógica do seu padrão bcrypt
         senha_hash = bcrypt.hashpw("admin123".encode(), bcrypt.gensalt()).decode()
         admin = Usuario(
-            nome="Administrador Geral",  # <--- ADICIONADO PARA EVITAR O ERRO
+            nome="Administrador Geral",
             login="admin",
             email="admin@unip.br",
             senha_hash=senha_hash,
-            role="admin",
+            role="super_admin",
             turma=None,
             semestre=None,
             cargo="administrador",
-            ativo=True # Adicionado para garantir que ele consiga logar
+            ativo=True
         )
         db.session.add(admin)
-        print("✅ Admin padrão criado!")
+        print("✅ Super Admin padrão criado!")
+    else:
+        # Migração: se já existe com role='admin', promove para super_admin
+        admin_existente = Usuario.query.filter_by(login="admin").first()
+        if admin_existente and admin_existente.role == "admin":
+            admin_existente.role = "super_admin"
+            print("✅ Admin promovido a super_admin!")
 
     try:
         db.session.commit()
@@ -74,6 +79,38 @@ def inicializar_unidade():
     except Exception as e:
         db.session.rollback()
         print(f"❌ Erro na inicialização: {e}")
+
+# ── HELPERS DE ROLE ──────────────────────────────────────────────────────────
+def is_admin(usuario):
+    """Retorna True para admin e super_admin."""
+    return usuario and usuario.role in ['admin', 'super_admin']
+
+def is_super_admin(usuario):
+    """Retorna True apenas para super_admin."""
+    return usuario and usuario.role == 'super_admin'
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── AUDITORIA ────────────────────────────────────────────────────────────────
+def registrar_log(acao, descricao):
+    """Registra uma ação de auditoria e limpa logs com mais de 30 dias."""
+    from datetime import timedelta
+    try:
+        log = LogAuditoria(
+            usuario_login=session.get("usuario", "sistema"),
+            acao=acao,
+            descricao=descricao,
+            ip=request.remote_addr
+        )
+        db.session.add(log)
+
+        # Limpeza automática de logs com mais de 30 dias
+        limite = datetime.utcnow() - timedelta(days=30)
+        LogAuditoria.query.filter(LogAuditoria.timestamp < limite).delete()
+
+        db.session.commit()
+    except Exception as e:
+        print(f"Erro ao registrar log: {e}")
+# ─────────────────────────────────────────────────────────────────────────────
 
 # Rota de relatório/filtro para coordenador e admin
 @app.route("/relatorio_reservas", methods=["GET", "POST"])
@@ -84,7 +121,7 @@ def relatorio_reservas():
     if not usuario:
         session.clear()
         return redirect("/login")
-    if usuario.role not in ["coordenador", "admin"]:
+    if usuario.role not in ["coordenador", "admin", "super_admin"]:
         return "Acesso negado", 403
 
     # Filtros
@@ -150,6 +187,7 @@ def login():
         if bcrypt.checkpw(senha_form.encode(), usuario.senha_hash.encode()):
             session.clear() # Limpa resquícios de sessões antigas/inválidas
             session["usuario"] = usuario.login
+            registrar_log("LOGIN", f"Login realizado por {usuario.nome} ({usuario.role})")
             return redirect("/painel_unip")
         else:
             flash("Senha Incorreta", "danger")
@@ -321,7 +359,7 @@ def nova_reserva():
         # Lógica de Professor Responsável:
         # Se for Admin/Coord, ele pode ter selecionado outro professor no select.
         # Se for Professor, ele reserva no próprio nome.
-        prof_login = request.form.get('professor') if usuario_logado.role in ['admin', 'coordenador'] else usuario_logado.login
+        prof_login = request.form.get('professor') if is_admin(usuario_logado) or usuario_logado.role == 'coordenador' else usuario_logado.login
         
         # Buscamos o nome real do professor para salvar na reserva
         obj_professor = Usuario.query.filter_by(login=prof_login).first()
@@ -374,7 +412,7 @@ def nova_reserva():
             return render_template("nova_reserva.html", laboratorios=laboratorios, turmas=turmas, usuario=usuario_logado, todos_professores=todos_professores)
 
         # DEFINIÇÃO RÍGIDA DE STATUS POR CARGO (Correção da Hierarquia)
-        if usuario_logado.role == 'admin':
+        if is_admin(usuario_logado):
             status_inicial = 'approved'
         elif usuario_logado.role == 'coordenador':
             status_inicial = 'pre_approved'
@@ -397,6 +435,7 @@ def nova_reserva():
             db.session.add(nova)
             db.session.commit()
             
+            registrar_log("CRIAR_RESERVA", f"Reserva criada: {disciplina} em {nome_exibicao_prof} — {data_selecionada.strftime('%d/%m/%Y')}")
             msg = "Agendamento solicitado! Aguardando aprovação." if status_inicial == 'pending' else "Reserva registrada com sucesso!"
             flash(msg, "success")
             return redirect(url_for('painel_unip'))
@@ -476,7 +515,7 @@ def editar(id):
         if usuario_logado.role == "professor":
             reserva.status = "pending"
         # Se um admin editar, mantemos como approved
-        elif usuario_logado.role == "admin":
+        elif is_admin(usuario_logado):
             reserva.status = "approved"
 
         db.session.commit()
@@ -511,7 +550,7 @@ def excluir(id):
     reserva = ReservaLab.query.get(id)
     if reserva:
         # Verificar permissões
-        if usuario_logado.role not in ['coordenador', 'admin'] and reserva.usuario_id != usuario_logado.id:
+        if not is_admin(usuario_logado) and usuario_logado.role != 'coordenador' and reserva.usuario_id != usuario_logado.id:
             return "Acesso negado", 403
         db.session.delete(reserva)
         db.session.commit()
@@ -528,11 +567,16 @@ def admin_usuarios():
         session.clear()
         return redirect("/login")
     
-    if usuario.role != 'admin':
+    if not is_admin(usuario):
         return "Acesso negado", 403
-    
-    usuarios = Usuario.query.all()
-    return render_template("admin_usuarios.html", usuarios=usuarios, usuario_logado=usuario)
+
+    # Admin comum não vê super_admin
+    if is_super_admin(usuario):
+        usuarios = Usuario.query.all()
+    else:
+        usuarios = Usuario.query.filter(Usuario.role != 'super_admin').all()
+    turmas = Turma.query.filter_by(status='ativa').order_by(Turma.nome).all()
+    return render_template("admin_usuarios.html", usuarios=usuarios, usuario_logado=usuario, turmas=turmas)
 
 @app.route("/admin/criar_usuario", methods=["POST"])
 def criar_usuario():
@@ -540,7 +584,12 @@ def criar_usuario():
         return redirect("/login")
     
     admin_logado = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not admin_logado or admin_logado.role != 'admin':
+    if not is_admin(admin_logado):
+        return "Acesso Negado", 403
+
+    # Admin comum não pode criar super_admin ou admin
+    role_nova_check = request.form.get("role")
+    if not is_super_admin(admin_logado) and role_nova_check in ['admin', 'super_admin']:
         return "Acesso Negado", 403
 
     # 3. Coleta os dados (Adicionamos o 'nome' aqui)
@@ -552,7 +601,6 @@ def criar_usuario():
     
     hash_senha = bcrypt.hashpw(senha_plana.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-    # 5. Cria o objeto (Incluímos o campo 'nome')
     novo_user = Usuario(
         nome=nome_novo,
         login=login_novo,
@@ -562,14 +610,27 @@ def criar_usuario():
         ativo=True
     )
 
+    # Se for aluno, vincula turma
+    if role_nova == 'aluno':
+        turma_id = request.form.get("turma_id")
+        semestre = request.form.get("semestre")
+        if turma_id:
+            turma = Turma.query.get(int(turma_id))
+            if turma:
+                novo_user.turma_id = turma.id
+                novo_user.turma = turma.nome
+        novo_user.semestre = semestre or None
+
     try:
         db.session.add(novo_user)
         db.session.commit()
+        registrar_log("CRIAR_USUARIO", f"Usuário '{login_novo}' ({role_nova}) criado")
+        flash("Usuário criado com sucesso!", "success")
     except Exception as e:
         db.session.rollback()
-        return f"Erro ao criar usuário: {e}", 500
+        flash(f"Erro ao criar usuário: {e}", "danger")
 
-    return redirect("/painel_unip")
+    return redirect(url_for("admin_usuarios"))
 
 @app.route("/admin/editar_usuario/<int:id>", methods=["GET", "POST"])
 def editar_usuario(id):
@@ -577,21 +638,39 @@ def editar_usuario(id):
         return redirect("/login")
     
     usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario_logado or usuario_logado.role != 'admin':
+    if not is_admin(usuario_logado):
         return "Acesso negado", 403
 
     user = Usuario.query.get_or_404(id)
 
+    # Admin comum não pode editar super_admin ou admin
+    if not is_super_admin(usuario_logado) and user.role in ['super_admin', 'admin']:
+        return "Acesso negado", 403
+
     if request.method == "GET":
-        return render_template("editar_usuario.html", user=user)
+        turmas = Turma.query.filter_by(status='ativa').order_by(Turma.nome).all()
+        return render_template("editar_usuario.html", user=user, turmas=turmas)
 
     # POST: Atualiza os dados
     user.nome = request.form.get("nome", user.nome)
     user.login = request.form.get("login", user.login)
     user.email = request.form.get("email", user.email)
     user.role = request.form.get("role", user.role)
-    user.turma = request.form.get("turma") or None
-    user.semestre = request.form.get("semestre") or None
+
+    # Se for aluno, vincula turma pelo ID
+    if user.role == 'aluno':
+        turma_id = request.form.get("turma_id")
+        if turma_id:
+            turma = Turma.query.get(int(turma_id))
+            if turma:
+                user.turma_id = turma.id
+                user.turma = turma.nome
+        user.semestre = request.form.get("semestre") or None
+    else:
+        # Não-alunos não têm turma
+        user.turma_id = None
+        user.turma = None
+        user.semestre = None
 
     # Se enviou nova_senha, criptografa e atualiza. Se não, mantém a atual.
     nova_senha = request.form.get("nova_senha")
@@ -600,6 +679,7 @@ def editar_usuario(id):
 
     try:
         db.session.commit()
+        registrar_log("EDITAR_USUARIO", f"Usuário '{user.login}' editado")
         flash("Usuário atualizado com sucesso!", "success")
     except Exception as e:
         db.session.rollback()
@@ -613,16 +693,25 @@ def excluir_usuario(id):
         return redirect("/login")
     
     usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario_logado or usuario_logado.role != 'admin':
+    if not is_admin(usuario_logado):
         return "Acesso negado", 403
-    
+
     user = Usuario.query.get(id)
-    # Proteção para não deletar a si próprio ou outros admins por engano
-    if user and user.role != 'admin': 
+    # super_admin nunca pode ser deletado
+    if user and user.role == 'super_admin':
+        flash("O super admin não pode ser removido.", "danger")
+        return redirect(url_for('painel_unip'))
+    # Admin comum não pode deletar outros admins
+    if user and not is_super_admin(usuario_logado) and user.role == 'admin':
+        flash("Apenas o super admin pode remover administradores.", "danger")
+        return redirect(url_for('admin_usuarios'))
+    if user and user.role not in ['admin', 'super_admin']:
+        nome_removido = user.login
         db.session.delete(user)
         db.session.commit()
+        registrar_log("EXCLUIR_USUARIO", f"Usuário '{nome_removido}' removido")
         flash("Usuário removido!", "success")
-    
+
     return redirect(url_for("painel_unip"))
 
 @app.route("/admin/perfil", methods=["GET", "POST"])
@@ -630,7 +719,7 @@ def admin_perfil():
     if "usuario" not in session:
         return redirect("/login")
     usuario = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario or usuario.role != 'admin':
+    if not is_admin(usuario):
         session.clear()
         return redirect("/login")
     if request.method == "POST":
@@ -645,7 +734,8 @@ def admin_perfil():
 
 @app.route("/admin/criar_laboratorio", methods=["POST"])
 def criar_laboratorio():
-    if "usuario" not in session or Usuario.query.filter_by(login=session["usuario"]).first().role != 'admin':
+    u = Usuario.query.filter_by(login=session.get("usuario")).first()
+    if not is_admin(u):
         return redirect("/login")
     
     nome = request.form.get('nome')
@@ -662,7 +752,7 @@ def excluir_laboratorio(id):
     if "usuario" not in session:
         return redirect("/login")
     usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario_logado or usuario_logado.role != 'admin':
+    if not is_admin(usuario_logado):
         return "Acesso negado", 403
 
     lab = Laboratorio.query.get(id)
@@ -677,12 +767,12 @@ def admin_config():
     if "usuario" not in session:
         return redirect("/login")
     usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario_logado or usuario_logado.role != 'admin':
+    if not is_admin(usuario_logado):
         return redirect(url_for('painel_unip'))
 
     laboratorios = Laboratorio.query.order_by(Laboratorio.nome).all()
     turmas = Turma.query.order_by(Turma.nome).all()
-    coordenadores = Usuario.query.filter(Usuario.role.in_(['coordenador', 'admin'])).all()
+    coordenadores = Usuario.query.filter(Usuario.role.in_(['coordenador', 'admin', 'super_admin'])).all()
 
     return render_template("admin_config.html",
                            usuario=usuario_logado,
@@ -695,7 +785,7 @@ def editar_laboratorio(id):
     if "usuario" not in session:
         return redirect("/login")
     usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario_logado or usuario_logado.role != 'admin':
+    if not is_admin(usuario_logado):
         return redirect(url_for('painel_unip'))
 
     lab = Laboratorio.query.get_or_404(id)
@@ -732,7 +822,7 @@ def editar_turma(id):
     if "usuario" not in session:
         return redirect("/login")
     usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario_logado or usuario_logado.role != 'admin':
+    if not is_admin(usuario_logado):
         return redirect(url_for('painel_unip'))
 
     turma = Turma.query.get_or_404(id)
@@ -745,7 +835,8 @@ def editar_turma(id):
 
 @app.route("/admin/criar_turma", methods=["POST"])
 def criar_turma():
-    if "usuario" not in session or Usuario.query.filter_by(login=session["usuario"]).first().role != 'admin':
+    u = Usuario.query.filter_by(login=session.get("usuario")).first()
+    if not is_admin(u):
         return redirect("/login")
     
     nome = request.form.get('nome')
@@ -765,7 +856,7 @@ def gerenciar_bloqueios():
         return redirect("/login")
     
     usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
-    if usuario_logado.role not in ['admin', 'coordenador']:
+    if not is_admin(usuario_logado) and usuario_logado.role != 'coordenador':
         return redirect(url_for('painel_unip'))
 
     if request.method == "POST":
@@ -787,6 +878,7 @@ def gerenciar_bloqueios():
         )
         db.session.add(novo_bloqueio)
         db.session.commit()
+        registrar_log("CRIAR_BLOQUEIO", f"Bloqueio criado: Lab #{lab_id} de {inicio_str} a {fim_str} — {motivo}")
         return redirect(url_for('gerenciar_bloqueios'))
 
     bloqueios = BloqueioLab.query.all()
@@ -802,13 +894,14 @@ def excluir_bloqueio(id):
     
     # Apenas Admin/Coord podem excluir bloqueios
     usuario = Usuario.query.filter_by(login=session["usuario"]).first()
-    if usuario.role in ['admin', 'coordenador']:
+    if is_admin(usuario) or usuario.role == 'coordenador':
         bloqueio = BloqueioLab.query.get(id)
         if bloqueio:
             db.session.delete(bloqueio)
             db.session.commit()
+            registrar_log("EXCLUIR_BLOQUEIO", f"Bloqueio #{id} removido")
             flash("Bloqueio removido com sucesso!", "success")
-            
+
     return redirect(url_for('gerenciar_bloqueios'))
 
 @app.route("/coordenador/reservas")
@@ -817,18 +910,31 @@ def coordenador_reservas():
         return redirect("/login")
     
     usuario = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario or usuario.role not in ['coordenador', 'admin']:
+    if not usuario or usuario.role not in ['coordenador', 'admin', 'super_admin']:
         return "Acesso negado", 403
 
-    # O Admin e o Coordenador veem o que está pendente ou pré-aprovado
-    reservas_pendentes = ReservaLab.query.filter(
-        or_(ReservaLab.status == 'pending', ReservaLab.status == 'pre_approved')
-    ).order_by(ReservaLab.data.asc()).all()
+    # Admin/super_admin vê tudo, Coordenador só vê reservas das suas turmas
+    if is_admin(usuario):
+        reservas_pendentes = ReservaLab.query.filter(
+            or_(ReservaLab.status == 'pending', ReservaLab.status == 'pre_approved')
+        ).order_by(ReservaLab.data.asc()).all()
 
-    # Histórico (finalizados)
-    todas_reservas = ReservaLab.query.filter(
-        or_(ReservaLab.status == 'approved', ReservaLab.status == 'rejected')
-    ).order_by(ReservaLab.data.desc()).limit(50).all()
+        todas_reservas = ReservaLab.query.filter(
+            or_(ReservaLab.status == 'approved', ReservaLab.status == 'rejected')
+        ).order_by(ReservaLab.data.desc()).limit(50).all()
+    else:
+        # Busca IDs das turmas onde este coordenador é responsável
+        turmas_do_coord = [t.id for t in Turma.query.filter_by(coordenador_id=usuario.id).all()]
+
+        reservas_pendentes = ReservaLab.query.filter(
+            or_(ReservaLab.status == 'pending', ReservaLab.status == 'pre_approved'),
+            ReservaLab.turma_id.in_(turmas_do_coord)
+        ).order_by(ReservaLab.data.asc()).all()
+
+        todas_reservas = ReservaLab.query.filter(
+            or_(ReservaLab.status == 'approved', ReservaLab.status == 'rejected'),
+            ReservaLab.turma_id.in_(turmas_do_coord)
+        ).order_by(ReservaLab.data.desc()).limit(50).all()
 
     return render_template("coordenador_reservas.html", 
                            reservas_pendentes=reservas_pendentes, 
@@ -842,18 +948,18 @@ def aprovar_reserva(id):
     usuario = Usuario.query.filter_by(login=session["usuario"]).first()
     reserva = ReservaLab.query.get_or_404(id)
     
-    if usuario.role == 'admin':
-        # Admin sempre finaliza
+    if is_admin(usuario):
         reserva.status = 'approved'
+        registrar_log("APROVAR_RESERVA", f"Reserva #{id} aprovada definitivamente")
         flash("Reserva finalizada com sucesso!", "success")
     elif usuario.role == 'coordenador':
-        # Coordenador só pode subir de pending para pre_approved
         if reserva.status == 'pending':
             reserva.status = 'pre_approved'
+            registrar_log("PRE_APROVAR_RESERVA", f"Reserva #{id} pré-aprovada")
             flash("Pré-aprovação realizada! Aguardando Admin.", "info")
         else:
             flash("Você não tem permissão para aprovação final.", "warning")
-    
+
     db.session.commit()
     return redirect(url_for("coordenador_reservas"))
 
@@ -863,14 +969,15 @@ def rejeitar_reserva(id):
         return redirect("/login")
     
     usuario = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario or usuario.role not in ['coordenador', 'admin']:
+    if not usuario or (not is_admin(usuario) and usuario.role != 'coordenador'):
         return "Acesso negado", 403
-    
+
     reserva = ReservaLab.query.get_or_404(id)
     reserva.status = 'rejected'
     db.session.commit()
+    registrar_log("REJEITAR_RESERVA", f"Reserva #{id} rejeitada")
     flash("Reserva rejeitada.", "warning")
-    
+
     return redirect(url_for("coordenador_reservas"))
 
 @app.route("/ver_alunos_turmas")
@@ -937,15 +1044,18 @@ def painel_unip():
     reservas_todas = ReservaLab.query.order_by(ReservaLab.data.desc()).all()
     
     usuarios, todos_labs, todas_turmas = [], [], []
-    if usuario_logado.role == 'admin':
+    if is_admin(usuario_logado):
         usuarios = Usuario.query.all()
         todos_labs = Laboratorio.query.all()
         todas_turmas = Turma.query.all()
 
+    # super_admin herda visual de admin no painel
+    role_display = 'admin' if usuario_logado.role == 'super_admin' else usuario_logado.role
     return render_template("lista.html", 
                            usuario=usuario_logado,
                            usuario_id=usuario_logado.id, 
-                           role=usuario_logado.role, 
+                           role=role_display,
+                           is_super_admin=is_super_admin(usuario_logado),
                            reservas=reservas_todas,
                            usuarios=usuarios,
                            laboratorios=todos_labs,
@@ -956,8 +1066,20 @@ def painel_unip():
 # Rota /bloquear_lab removida — use /admin/bloqueios (gerenciar_bloqueios)
 # Rotas /pre_aprovar_reserva e /confirmar_reserva removidas — use /aprovar_reserva (com lógica de role)
 
+@app.route("/admin/logs")
+def admin_logs():
+    if "usuario" not in session:
+        return redirect("/login")
+    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not is_super_admin(usuario):
+        return "Acesso negado", 403
+
+    logs = LogAuditoria.query.order_by(LogAuditoria.timestamp.desc()).limit(500).all()
+    return render_template("admin_logs.html", logs=logs, usuario=usuario)
+
 @app.route("/logout")
 def logout():
+    registrar_log("LOGOUT", f"Logout realizado")
     session.clear()
     return redirect("/login")
 
