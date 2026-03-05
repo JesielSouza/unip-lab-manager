@@ -981,7 +981,7 @@ def aprovar_reserva(id):
         registrar_log("APROVAR_RESERVA", f"Reserva #{id} aprovada definitivamente")
         flash("Reserva finalizada com sucesso!", "success")
         # Notificar professor por email
-        prof = Usuario.query.filter_by(login=reserva.professor).first()
+        prof = Usuario.query.filter_by(nome=reserva.professor).first()
         if prof and prof.email:
             enviar_email(
                 prof.email,
@@ -1010,7 +1010,7 @@ def aprovar_reserva(id):
             registrar_log("PRE_APROVAR_RESERVA", f"Reserva #{id} pré-aprovada")
             flash("Pré-aprovação realizada! Aguardando Admin.", "info")
             # Notificar professor sobre pré-aprovação
-            prof = Usuario.query.filter_by(login=reserva.professor).first()
+            prof = Usuario.query.filter_by(nome=reserva.professor).first()
             if prof and prof.email:
                 enviar_email(
                     prof.email,
@@ -1054,7 +1054,7 @@ def rejeitar_reserva(id):
     registrar_log("REJEITAR_RESERVA", f"Reserva #{id} rejeitada")
     flash("Reserva rejeitada.", "warning")
     # Notificar professor sobre rejeição
-    prof = Usuario.query.filter_by(login=reserva.professor).first()
+    prof = Usuario.query.filter_by(nome=reserva.professor).first()
     if prof and prof.email:
         enviar_email(
             prof.email,
