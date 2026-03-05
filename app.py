@@ -5,9 +5,33 @@ from datetime import datetime
 import os
 import bcrypt
 from flask_migrate import Migrate
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-troque-em-producao")
+
+# ── FUNÇÃO DE EMAIL ──────────────────────────────────────────
+def enviar_email(destinatario, assunto, corpo_html):
+    """Envia email via Gmail SMTP. Falha silenciosa se não configurado."""
+    mail_user = os.environ.get("MAIL_USER")
+    mail_pass = os.environ.get("MAIL_PASSWORD")
+    if not mail_user or not mail_pass or not destinatario:
+        return False
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = assunto
+        msg["From"] = f"UNIP Lab Manager <{mail_user}>"
+        msg["To"] = destinatario
+        msg.attach(MIMEText(corpo_html, "html"))
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(mail_user, mail_pass)
+            server.sendmail(mail_user, destinatario, msg.as_string())
+        return True
+    except Exception as e:
+        print(f"[EMAIL] Erro ao enviar: {e}")
+        return False
 app.config['JSON_AS_ASCII'] = False # Correção para exibir acentos corretamente no JSON
 
 # CONFIGURAÇÃO DO BANCO — usa DATABASE_URL em produção, SQLite em dev
@@ -952,11 +976,59 @@ def aprovar_reserva(id):
         reserva.status = 'approved'
         registrar_log("APROVAR_RESERVA", f"Reserva #{id} aprovada definitivamente")
         flash("Reserva finalizada com sucesso!", "success")
+        # Notificar professor por email
+        prof = Usuario.query.filter_by(login=reserva.professor).first()
+        if prof and prof.email:
+            enviar_email(
+                prof.email,
+                f"✅ Reserva aprovada — {reserva.lab.nome}",
+                f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+                    <div style="background:#003366;padding:20px;text-align:center">
+                        <h2 style="color:#f5b915;margin:0">UNIP Lab Manager</h2>
+                    </div>
+                    <div style="padding:24px;background:#f8f9fa">
+                        <h3 style="color:#198754">✅ Sua reserva foi aprovada!</h3>
+                        <p>Olá, <strong>{prof.nome}</strong>!</p>
+                        <p>Sua reserva foi <strong>aprovada</strong> com sucesso.</p>
+                        <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                            <tr><td style="padding:8px;background:#e9ecef"><strong>Laboratório</strong></td><td style="padding:8px">{reserva.lab.nome}</td></tr>
+                            <tr><td style="padding:8px;background:#e9ecef"><strong>Data</strong></td><td style="padding:8px">{reserva.data}</td></tr>
+                            <tr><td style="padding:8px;background:#e9ecef"><strong>Horário</strong></td><td style="padding:8px">{reserva.horario_inicio} - {reserva.horario_fim}</td></tr>
+                            <tr><td style="padding:8px;background:#e9ecef"><strong>Disciplina</strong></td><td style="padding:8px">{reserva.disciplina}</td></tr>
+                        </table>
+                        <p style="color:#6c757d;font-size:0.85rem">UNIP Lab Manager — Sistema de Gestão de Laboratórios</p>
+                    </div>
+                </div>"""
+            )
     elif usuario.role == 'coordenador':
         if reserva.status == 'pending':
             reserva.status = 'pre_approved'
             registrar_log("PRE_APROVAR_RESERVA", f"Reserva #{id} pré-aprovada")
             flash("Pré-aprovação realizada! Aguardando Admin.", "info")
+            # Notificar professor sobre pré-aprovação
+            prof = Usuario.query.filter_by(login=reserva.professor).first()
+            if prof and prof.email:
+                enviar_email(
+                    prof.email,
+                    f"🔵 Reserva pré-aprovada — {reserva.lab.nome}",
+                    f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+                        <div style="background:#003366;padding:20px;text-align:center">
+                            <h2 style="color:#f5b915;margin:0">UNIP Lab Manager</h2>
+                        </div>
+                        <div style="padding:24px;background:#f8f9fa">
+                            <h3 style="color:#0d6efd">🔵 Sua reserva foi pré-aprovada!</h3>
+                            <p>Olá, <strong>{prof.nome}</strong>!</p>
+                            <p>Sua reserva foi <strong>pré-aprovada</strong> pelo coordenador e aguarda aprovação final do administrador.</p>
+                            <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                                <tr><td style="padding:8px;background:#e9ecef"><strong>Laboratório</strong></td><td style="padding:8px">{reserva.lab.nome}</td></tr>
+                                <tr><td style="padding:8px;background:#e9ecef"><strong>Data</strong></td><td style="padding:8px">{reserva.data}</td></tr>
+                                <tr><td style="padding:8px;background:#e9ecef"><strong>Horário</strong></td><td style="padding:8px">{reserva.horario_inicio} - {reserva.horario_fim}</td></tr>
+                                <tr><td style="padding:8px;background:#e9ecef"><strong>Disciplina</strong></td><td style="padding:8px">{reserva.disciplina}</td></tr>
+                            </table>
+                            <p style="color:#6c757d;font-size:0.85rem">UNIP Lab Manager — Sistema de Gestão de Laboratórios</p>
+                        </div>
+                    </div>"""
+                )
         else:
             flash("Você não tem permissão para aprovação final.", "warning")
 
@@ -977,6 +1049,31 @@ def rejeitar_reserva(id):
     db.session.commit()
     registrar_log("REJEITAR_RESERVA", f"Reserva #{id} rejeitada")
     flash("Reserva rejeitada.", "warning")
+    # Notificar professor sobre rejeição
+    prof = Usuario.query.filter_by(login=reserva.professor).first()
+    if prof and prof.email:
+        enviar_email(
+            prof.email,
+            f"❌ Reserva rejeitada — {reserva.lab.nome}",
+            f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+                <div style="background:#003366;padding:20px;text-align:center">
+                    <h2 style="color:#f5b915;margin:0">UNIP Lab Manager</h2>
+                </div>
+                <div style="padding:24px;background:#f8f9fa">
+                    <h3 style="color:#dc3545">❌ Sua reserva foi rejeitada</h3>
+                    <p>Olá, <strong>{prof.nome}</strong>!</p>
+                    <p>Infelizmente sua reserva foi <strong>rejeitada</strong>.</p>
+                    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                        <tr><td style="padding:8px;background:#e9ecef"><strong>Laboratório</strong></td><td style="padding:8px">{reserva.lab.nome}</td></tr>
+                        <tr><td style="padding:8px;background:#e9ecef"><strong>Data</strong></td><td style="padding:8px">{reserva.data}</td></tr>
+                        <tr><td style="padding:8px;background:#e9ecef"><strong>Horário</strong></td><td style="padding:8px">{reserva.horario_inicio} - {reserva.horario_fim}</td></tr>
+                        <tr><td style="padding:8px;background:#e9ecef"><strong>Disciplina</strong></td><td style="padding:8px">{reserva.disciplina}</td></tr>
+                    </table>
+                    <p>Em caso de dúvidas, entre em contato com a coordenação.</p>
+                    <p style="color:#6c757d;font-size:0.85rem">UNIP Lab Manager — Sistema de Gestão de Laboratórios</p>
+                </div>
+            </div>"""
+        )
 
     return redirect(url_for("coordenador_reservas"))
 
