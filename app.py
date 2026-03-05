@@ -1083,8 +1083,10 @@ def logout():
     session.clear()
     return redirect("/login")
 
+# Inicializa o banco ao subir com gunicorn ou diretamente
+with app.app_context():
+    db.create_all()
+    inicializar_unidade()
+
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-        inicializar_unidade() # Garante que os labs existam
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')
