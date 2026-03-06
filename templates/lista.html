@@ -29,6 +29,12 @@
 
     /* ── PAINEL DE NOTIFICAÇÕES ── */
     .notif-btn { position: relative; }
+    @keyframes notif-pulse-anim {
+        0%, 100% { transform: scale(1); }
+        25% { transform: scale(1.15) rotate(-10deg); }
+        75% { transform: scale(1.15) rotate(10deg); }
+    }
+    .notif-pulse { animation: notif-pulse-anim 0.4s ease 3; }
     .notif-badge {
         position: absolute; top: -6px; right: -6px;
         background: #dc3545; color: white;
@@ -114,9 +120,9 @@
         <button class="btn btn-outline-light btn-sm me-2 notif-btn" onclick="abrirNotif()" title="Notificações">
             <i class="bi bi-bell-fill"></i>
             {% set total_notif = reservas|selectattr('status','in',['pending','pre_approved'])|list|length %}
-            {% if total_notif > 0 %}
-            <span class="notif-badge">{{ total_notif if total_notif < 10 else '9+' }}</span>
-            {% endif %}
+            <span class="notif-badge" id="notifBadge" style="{{ 'display:none' if total_notif == 0 else '' }}">
+                {{ total_notif if total_notif < 10 else '9+' }}
+            </span>
         </button>
         {% endif %}
 
@@ -574,6 +580,7 @@
         {% set pendentes = reservas|selectattr('status','equalto','pending')|list %}
         {% set pre_aprovadas = reservas|selectattr('status','equalto','pre_approved')|list %}
         {% set total_acoes = pendentes|length + pre_aprovadas|length %}
+        <div id="notifDinamica">
 
         {% if total_acoes > 0 %}
         <div class="notif-section-title">
@@ -629,6 +636,8 @@
             <div style="font-size:0.72rem">Nenhuma reserva aguardando ação.</div>
         </div>
         {% endif %}
+
+        </div>{# fim notifDinamica #}
 
         {# ── BLOQUEIOS ATIVOS ── #}
         {% if bloqueios %}
@@ -815,13 +824,82 @@
         document.getElementById('notifOverlay').style.display = 'block';
         document.getElementById('notifDrawer').classList.add('open');
         document.body.style.overflow = 'hidden';
+        notifAberta = true;
     }
     function fecharNotif() {
         document.getElementById('notifOverlay').style.display = 'none';
         document.getElementById('notifDrawer').classList.remove('open');
         document.body.style.overflow = '';
+        notifAberta = false;
     }
     document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharNotif(); });
+
+    // ── POLLING TEMPO REAL ──────────────────────────────────────────────
+    let ultimoTotal = {{ reservas|selectattr('status','in',['pending','pre_approved'])|list|length }};
+    let notifAberta = false;
+
+    async function verificarNotificacoes() {
+        try {
+            const res = await fetch('/api/notificacoes');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.erro) return;
+
+            const badge = document.getElementById('notifBadge');
+            const total = data.total;
+
+            // Atualiza badge do sino
+            if (badge) {
+                if (total > 0) {
+                    badge.textContent = total < 10 ? total : '9+';
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
+            // Se chegou nova notificação, pisca o sino
+            if (total > ultimoTotal) {
+                const btn = document.querySelector('.notif-btn');
+                if (btn) {
+                    btn.classList.add('notif-pulse');
+                    setTimeout(() => btn.classList.remove('notif-pulse'), 2000);
+                }
+                // Atualiza conteúdo do drawer se estiver aberto
+                if (notifAberta) {
+                    atualizarDrawer(data.reservas);
+                }
+            }
+            ultimoTotal = total;
+        } catch(e) {}
+    }
+
+    function atualizarDrawer(reservas) {
+        const container = document.getElementById('notifDinamica');
+        if (!container) return;
+        if (reservas.length === 0) {
+            container.innerHTML = '<div class="notif-empty"><i class="bi bi-check-circle-fill text-success"></i><div style="font-size:0.8rem;font-weight:700;color:#1e293b">Tudo em dia!</div></div>';
+            return;
+        }
+        container.innerHTML = reservas.map(r => `
+            <div class="notif-item ${r.status === 'pending' ? 'pending' : 'pre'}">
+                <div class="notif-item-title">${r.lab}</div>
+                <div class="notif-item-sub"><i class="bi bi-person me-1"></i>${r.professor} &nbsp;·&nbsp; <i class="bi bi-calendar me-1"></i>${r.data}</div>
+                <div class="notif-item-sub mt-1">
+                    <span class="badge ${r.status === 'pending' ? 'bg-warning text-dark' : 'bg-primary'}" style="font-size:0.6rem">
+                        ${r.status === 'pending' ? 'Aguardando Coordenador' : 'Pré-aprovado — Falta aprovação final'}
+                    </span>
+                </div>
+                <div class="notif-item-actions">
+                    <a href="/aprovar_reserva/${r.id}" class="btn btn-success btn-sm" style="font-size:0.7rem;padding:3px 10px"><i class="bi bi-check-all"></i> Aprovar</a>
+                    <a href="/rejeitar_reserva/${r.id}" class="btn btn-outline-danger btn-sm" style="font-size:0.7rem;padding:3px 10px"><i class="bi bi-x"></i> Rejeitar</a>
+                </div>
+            </div>`).join('');
+    }
+
+    // Inicia polling a cada 30 segundos
+    setInterval(verificarNotificacoes, 30000);
+    // ────────────────────────────────────────────────────────────────────
   </script>
 
   <style>

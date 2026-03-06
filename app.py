@@ -352,6 +352,41 @@ def cadastro():
 
     return render_template('cadastro.html')
 
+@app.route("/api/notificacoes")
+def api_notificacoes():
+    """Retorna contagem de pendências e lista resumida para polling em tempo real."""
+    if "usuario" not in session:
+        return jsonify({"erro": "nao_autenticado"}), 401
+
+    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not usuario or not is_admin(usuario):
+        return jsonify({"erro": "sem_permissao"}), 403
+
+    pendentes = ReservaLab.query.filter_by(status='pending').count()
+    pre_aprovadas = ReservaLab.query.filter_by(status='pre_approved').count()
+    total = pendentes + pre_aprovadas
+
+    # Lista resumida das reservas pendentes
+    reservas_raw = ReservaLab.query.filter(
+        ReservaLab.status.in_(['pending', 'pre_approved'])
+    ).order_by(ReservaLab.id.desc()).limit(10).all()
+
+    reservas = [{
+        "id": r.id,
+        "lab": r.lab.nome,
+        "professor": r.professor,
+        "data": r.data,
+        "status": r.status
+    } for r in reservas_raw]
+
+    return jsonify({
+        "total": total,
+        "pendentes": pendentes,
+        "pre_aprovadas": pre_aprovadas,
+        "reservas": reservas
+    })
+
+
 @app.route("/api/eventos")
 def api_eventos():
     try:
