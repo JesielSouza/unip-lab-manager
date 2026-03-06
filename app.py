@@ -1214,7 +1214,8 @@ def painel_unip():
                            usuarios=usuarios,
                            laboratorios=todos_labs,
                            turmas=todas_turmas,
-                           bloqueios=bloqueios)
+                           bloqueios=bloqueios,
+                           now=datetime.now())
 
 
 # Rota /bloquear_lab removida — use /admin/bloqueios (gerenciar_bloqueios)
