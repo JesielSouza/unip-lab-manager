@@ -152,30 +152,53 @@
       .container { padding-left: 12px; padding-right: 12px; }
       .page-header { padding: 1rem 0; }
       .page-header h4 { font-size: 1.1rem; }
-      .page-header .d-flex { flex-wrap: wrap; gap: 8px; }
+
+      /* Section header labs - título e botão em linha */
+      .section-header {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 0.75rem 1rem;
+      }
+      .section-title { font-size: 0.68rem; }
+      .section-header .btn-unip { 
+        padding: 5px 12px !important; 
+        font-size: 0.75rem;
+        flex-shrink: 0;
+      }
+
+      /* Badges - evitar quebra de linha */
+      .badge-ativo, .badge-manutencao, .badge-ativa, .badge-arquivada {
+        font-size: 0.6rem !important;
+        padding: 3px 7px !important;
+        white-space: nowrap;
+        display: inline-block;
+      }
+      .stat-pill {
+        font-size: 0.6rem !important;
+        padding: 3px 7px !important;
+        white-space: nowrap;
+      }
+      .aluno-chip {
+        font-size: 0.65rem !important;
+        padding: 3px 8px !important;
+      }
+
+      /* Tabela labs */
       .table-responsive { -webkit-overflow-scrolling: touch; }
-      .table { font-size: 0.78rem; }
-      .table thead th, .table tbody td { padding: 8px 10px; }
-      .results-card { border-radius: 12px; }
-      .filter-bar, .filter-card { flex-direction: column; }
-      .filter-bar input, .filter-bar select { min-width: unset !important; width: 100%; }
-      .btn { font-size: 0.8rem; }
-      .d-flex.gap-3 { gap: 8px !important; }
-      .d-flex.gap-2 { gap: 6px !important; }
-      .row.g-4 > [class*='col-'] { margin-bottom: 0; }
+      .table { font-size: 0.76rem; }
+      .table thead th, .table tbody td { padding: 8px 8px; }
+
+      /* Oculta coluna capacidade em mobile - já aparece na pill */
+      /* Botão editar menor */
+      .btn-edit-lab { padding: 4px 8px !important; font-size: 0.7rem !important; }
+
+      /* Turmas - ocultar coluna curso em mobile */
+      table:last-of-type thead th:nth-child(2),
+      table:last-of-type tbody td:nth-child(2) { display: none; }
     }
     @media (max-width: 480px) {
-      body { font-size: 0.9rem; }
-      .navbar-brand { font-size: 0.85rem; }
-      h4 { font-size: 1rem !important; }
-      .form-control, .form-select, input, select, textarea {
-        font-size: 16px !important; /* evita zoom no iOS */
-        border-radius: 10px;
-      }
-      .btn-unip, .btn-login, .btn-salvar, .btn-filtrar, .btn-interditar {
-        width: 100%;
-        margin-bottom: 6px;
-      }
+      .form-control, .form-select, input, select { font-size: 16px !important; }
+      .section-header { align-items: flex-start; }
     }
   </style>
 </head>

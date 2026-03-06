@@ -29,6 +29,53 @@
 
     /* ── PAINEL DE NOTIFICAÇÕES ── */
     .notif-btn { position: relative; }
+
+    /* ── PAINEL HEADER ──────────────────────────────────────── */
+    .painel-header { }
+    .painel-header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .painel-titulo {
+        font-size: 1rem;
+        font-weight: 800;
+        color: #1e293b;
+    }
+    .painel-acoes {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn-acao {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #eff6ff;
+        color: #1e40af;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-decoration: none;
+        transition: 0.15s;
+        white-space: nowrap;
+    }
+    .btn-acao:hover { background: #dbeafe; color: #1e3a8a; }
+    .btn-acao-dark { background: #f1f5f9; color: #334155; border-color: #cbd5e1; }
+    .btn-acao-dark:hover { background: #e2e8f0; color: #1e293b; }
+    .btn-acao-red { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+    .btn-acao-red:hover { background: #fee2e2; color: #7f1d1d; }
+    .btn-acao-gray { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+    .btn-acao-gray:hover { background: #f1f5f9; color: #475569; }
+
+    @media (max-width: 480px) {
+        .painel-acoes { gap: 6px; }
+        .btn-acao { font-size: 0.72rem; padding: 5px 10px; }
+        .btn-acao span { display: inline; }
+    }
     @keyframes notif-pulse-anim {
         0%, 100% { transform: scale(1); }
         25% { transform: scale(1.15) rotate(-10deg); }
@@ -104,31 +151,33 @@
 </head>
 <body>
 
-  <nav class="navbar navbar-dark navbar-unip shadow-sm mb-4" style="padding:0.6rem 0;">
-    <div class="container d-flex align-items-center justify-content-between gap-2">
-      <span class="navbar-brand fw-bold mb-0" style="font-size:0.95rem;">
-        <i class="bi bi-mortarboard-fill me-1"></i> UNIP Lab Manager
-      </span>
-      <div class="d-flex align-items-center gap-1 flex-wrap justify-content-end">
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-unip shadow-sm mb-4">
+    <div class="container">
+      <span class="navbar-brand fw-bold"><i class="bi bi-mortarboard-fill me-2"></i> UNIP Lab Manager</span>
+      
+      <div class="navbar-nav ms-auto align-items-center text-light small">
+        <!-- Acesso à Gestão: Aparece apenas para Admin e Coordenador -->
         {% if role in ['admin', 'coordenador'] %}
-        <a class="btn btn-warning btn-sm fw-bold shadow-sm" href="/coordenador/reservas" style="font-size:0.72rem;padding:4px 8px;">
+        <a class="btn btn-warning btn-sm me-3 fw-bold shadow-sm" href="/coordenador/reservas">
             <i class="bi bi-shield-lock-fill me-1"></i> GESTÃO
         </a>
         {% endif %}
+
         {% if role == 'admin' %}
-        <button class="btn btn-outline-light btn-sm notif-btn" onclick="abrirNotif()" title="Notificações" style="padding:4px 8px;">
+        <button class="btn btn-outline-light btn-sm me-2 notif-btn" onclick="abrirNotif()" title="Notificações">
             <i class="bi bi-bell-fill"></i>
             {% set total_notif = reservas|selectattr('status','in',['pending','pre_approved'])|list|length %}
             <span class="notif-badge" id="notifBadge" style="{{ 'display:none' if total_notif == 0 else '' }}">
                 {{ total_notif if total_notif < 10 else '9+' }}
             </span>
         </button>
-        <a class="btn btn-outline-light btn-sm" href="{{ url_for('admin_perfil') }}" style="font-size:0.72rem;padding:4px 8px;">
-          <i class="bi bi-person-circle me-1"></i><span class="d-none d-md-inline">Perfil</span>
-        </a>
         {% endif %}
-        <span class="text-white-50 small d-none d-md-inline">{{ usuario.nome }}</span>
-        <a class="btn btn-outline-light btn-sm" href="/logout" style="font-size:0.72rem;padding:4px 8px;">Sair</a>
+
+        <span class="me-3">Usuário: <strong>{{ usuario.nome }}</strong> ({{ role }})</span>
+        {% if role == 'admin' %}
+        <a class="btn btn-outline-light btn-sm me-2" href="{{ url_for('admin_perfil') }}"><i class="bi bi-person-circle me-1"></i>Perfil</a>
+        {% endif %}
+        <a class="btn btn-outline-light btn-sm" href="/logout">Sair</a>
       </div>
     </div>
   </nav>
@@ -157,37 +206,39 @@
 
     <div class="row">
       <div class="col-lg-8">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <span class="fw-bold text-muted small">Reservas</span>
-
-            <div class="d-flex gap-2 flex-wrap">
-                {% if role == 'admin' %}
-                <a href="{{ url_for('admin_usuarios') }}" class="btn btn-outline-primary btn-sm shadow-sm">
-                    <i class="bi bi-people me-1"></i> Usuários
-                </a>
-                <a href="{{ url_for('admin_config') }}" class="btn btn-outline-primary btn-sm shadow-sm">
-                    <i class="bi bi-building me-1"></i> Labs & Turmas
-                </a>
-                {% endif %}
-                {% if role in ['admin', 'coordenador'] %}
-                <a href="{{ url_for('relatorio_reservas') }}" class="btn btn-secondary btn-sm shadow-sm">
-                    <i class="bi bi-bar-chart-line me-1"></i> Relatório
-                </a>
-                {% endif %}
-                {% if role == 'admin' %}
-                <a href="/admin/bloqueios" class="btn btn-danger btn-sm shadow-sm">
-                    <i class="bi bi-lock-fill me-1"></i> Bloqueios
-                </a>
-                {% if is_super_admin %}
-                <a href="{{ url_for('admin_logs') }}" class="btn btn-outline-secondary btn-sm shadow-sm">
-                    <i class="bi bi-journal-text me-1"></i> Logs
-                </a>
-                {% endif %}
-                {% endif %}
-                <a href="/nova_reserva" class="btn btn-success btn-sm shadow-sm px-3">
+        <!-- ── HEADER DO PAINEL ── -->
+        <div class="painel-header mb-4">
+            <div class="painel-header-top">
+                <span class="painel-titulo"><i class="bi bi-calendar3 me-2"></i>Reservas</span>
+                <a href="/nova_reserva" class="btn btn-success btn-sm px-3 fw-bold">
                     <i class="bi bi-plus-lg me-1"></i> Nova Reserva
                 </a>
             </div>
+            {% if role in ['admin', 'coordenador'] %}
+            <div class="painel-acoes">
+                {% if role == 'admin' %}
+                <a href="{{ url_for('admin_usuarios') }}" class="btn-acao">
+                    <i class="bi bi-people"></i><span>Usuários</span>
+                </a>
+                <a href="{{ url_for('admin_config') }}" class="btn-acao">
+                    <i class="bi bi-building"></i><span>Labs & Turmas</span>
+                </a>
+                {% endif %}
+                <a href="{{ url_for('relatorio_reservas') }}" class="btn-acao btn-acao-dark">
+                    <i class="bi bi-bar-chart-line"></i><span>Relatório</span>
+                </a>
+                {% if role == 'admin' %}
+                <a href="/admin/bloqueios" class="btn-acao btn-acao-red">
+                    <i class="bi bi-lock-fill"></i><span>Bloqueios</span>
+                </a>
+                {% if is_super_admin %}
+                <a href="{{ url_for('admin_logs') }}" class="btn-acao btn-acao-gray">
+                    <i class="bi bi-journal-text"></i><span>Logs</span>
+                </a>
+                {% endif %}
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
 
         <div class="tab-content">

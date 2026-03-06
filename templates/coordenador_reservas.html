@@ -61,11 +61,14 @@
 
         /* Cores de Status Hierárquico */
         .status-badge {
-            font-size: 0.65rem;
+            font-size: 0.63rem;
             font-weight: 800;
-            padding: 4px 10px;
-            border-radius: 50px;
+            padding: 4px 8px;
+            border-radius: 20px;
             text-transform: uppercase;
+            display: inline-block;
+            line-height: 1.3;
+            text-align: center;
         }
         .status-pending { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .status-pre { background: #e1f5fe; color: #01579b; border: 1px solid #b3e5fc; }
@@ -74,37 +77,22 @@
 
         .btn-approve { background-color: #28a745; color: white; border: none; }
         .btn-reject { background-color: #dc3545; color: white; border: none; }
-    
-    /* ── MOBILE RESPONSIVO ─────────────────────────────────── */
-    @media (max-width: 768px) {
-      .container { padding-left: 12px; padding-right: 12px; }
-      .section-title { font-size: 0.75rem; margin-bottom: 15px; }
-      .table-responsive { -webkit-overflow-scrolling: touch; }
-      table { font-size: 0.75rem; }
-      table thead th, table tbody td { padding: 8px 8px; }
-      /* Ocultar coluna Prof/Turma em mobile */
-      table thead th:nth-child(4),
-      table tbody td:nth-child(4) { display: none; }
-      /* Botões de ação em coluna compacta */
-      .d-flex.justify-content-center.gap-2 { flex-direction: column; gap: 4px !important; }
-      .btn-action { padding: 6px 10px; font-size: 0.7rem; width: 100%; text-align: center; }
-    }
-    @media (max-width: 480px) {
-      .form-control, .form-select { font-size: 16px !important; }
-    }
-  </style>
+    </style>
 </head>
 <body>
 
-<nav class="navbar navbar-unip navbar-dark mb-5 shadow">
+<nav class="navbar navbar-unip navbar-dark mb-4 shadow" style="padding:0.6rem 0;">
     <div class="container d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center">
-            <img src="https://www.unip.br/assets/img/logo/logo-unip.svg" alt="UNIP" height="35" class="me-3">
-            <h5 class="text-white mb-0 fw-bold border-start ps-3 d-none d-md-block">PAINEL DE DECISÃO</h5>
-        </div>
-        <div class="text-end">
-            <span class="text-white-50 small me-3">Logado como: <strong class="text-white">{{ usuario_logado.nome }}</strong></span>
-            <a href="/painel_unip" class="btn btn-sm btn-outline-light rounded-pill px-3">Voltar</a>
+        <span class="navbar-brand fw-bold mb-0" style="font-size:0.95rem;">
+            <i class="bi bi-shield-lock-fill me-1"></i>
+            <span class="d-none d-md-inline">PAINEL DE DECISÃO</span>
+            <span class="d-md-none">GESTÃO</span>
+        </span>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-white-50 small d-none d-md-inline">{{ usuario_logado.nome }}</span>
+            <a href="/painel_unip" class="btn btn-sm btn-outline-light" style="font-size:0.75rem;padding:4px 12px;">
+                <i class="bi bi-arrow-left me-1"></i>Voltar
+            </a>
         </div>
     </div>
 </nav>
