@@ -82,7 +82,38 @@
             border-radius: 10px;
             font-weight: 600;
         }
-    </style>
+    
+    /* ── MOBILE RESPONSIVO ─────────────────────────────────── */
+    @media (max-width: 768px) {
+      .container { padding-left: 12px; padding-right: 12px; }
+      .page-header { padding: 1rem 0; }
+      .page-header h4 { font-size: 1.1rem; }
+      .page-header .d-flex { flex-wrap: wrap; gap: 8px; }
+      .table-responsive { -webkit-overflow-scrolling: touch; }
+      .table { font-size: 0.78rem; }
+      .table thead th, .table tbody td { padding: 8px 10px; }
+      .results-card { border-radius: 12px; }
+      .filter-bar, .filter-card { flex-direction: column; }
+      .filter-bar input, .filter-bar select { min-width: unset !important; width: 100%; }
+      .btn { font-size: 0.8rem; }
+      .d-flex.gap-3 { gap: 8px !important; }
+      .d-flex.gap-2 { gap: 6px !important; }
+      .row.g-4 > [class*='col-'] { margin-bottom: 0; }
+    }
+    @media (max-width: 480px) {
+      body { font-size: 0.9rem; }
+      .navbar-brand { font-size: 0.85rem; }
+      h4 { font-size: 1rem !important; }
+      .form-control, .form-select, input, select, textarea {
+        font-size: 16px !important; /* evita zoom no iOS */
+        border-radius: 10px;
+      }
+      .btn-unip, .btn-login, .btn-salvar, .btn-filtrar, .btn-interditar {
+        width: 100%;
+        margin-bottom: 6px;
+      }
+    }
+  </style>
 </head>
 <body>
 
