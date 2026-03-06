@@ -1215,7 +1215,7 @@ def painel_unip():
                            laboratorios=todos_labs,
                            turmas=todas_turmas,
                            bloqueios=bloqueios,
-                           now=datetime.now())
+                           now=datetime.utcnow() - __import__('datetime').timedelta(hours=3))
 
 
 # Rota /bloquear_lab removida — use /admin/bloqueios (gerenciar_bloqueios)

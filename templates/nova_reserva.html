@@ -296,8 +296,10 @@ function renderCalendar() {
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const hoje = new Date();
-    const hojeStr = hoje.toISOString().split('T')[0];
+    // Usa UTC-3 (Brasília) para definir "hoje" corretamente
+    const agora = new Date();
+    const brasilia = new Date(agora.getTime() - (3 * 60 * 60 * 1000));
+    const hojeStr = brasilia.toISOString().split('T')[0];
 
     title.innerText = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
         .format(currentDate).toUpperCase();
@@ -326,8 +328,10 @@ function renderCalendar() {
         cell.className = 'cal-day';
 
         // Estados visuais
+        const isPast = dateStr < hojeStr;
         if (dateStr === hojeStr) cell.classList.add('cal-hoje');
         if (dateStr === selectedDate) cell.classList.add('cal-selected');
+        if (isPast) cell.classList.add('cal-passado');
 
         // Número do dia
         const num = document.createElement('span');
@@ -361,16 +365,18 @@ function renderCalendar() {
             cell.addEventListener('mouseleave', esconderTooltip);
         }
 
-        // Clique para selecionar data
-        cell.addEventListener('click', () => {
-            selectedDate = dateStr;
-            document.getElementById('data_final').value = dateStr;
-            const dObj = new Date(year, month, d);
-            document.getElementById('selectedDateDisplay').innerHTML =
-                `<i class="bi bi-calendar-check me-2 text-success"></i>` +
-                dObj.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-            renderCalendar();
-        });
+        // Clique para selecionar data — bloqueia datas passadas
+        if (!isPast) {
+            cell.addEventListener('click', () => {
+                selectedDate = dateStr;
+                document.getElementById('data_final').value = dateStr;
+                const dObj = new Date(year, month, d);
+                document.getElementById('selectedDateDisplay').innerHTML =
+                    `<i class="bi bi-calendar-check me-2 text-success"></i>` +
+                    dObj.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                renderCalendar();
+            });
+        }
 
         grid.appendChild(cell);
     }
@@ -572,6 +578,12 @@ document.addEventListener('DOMContentLoaded', carregarEventos);
     border-radius: 50%;
     margin-right: 3px;
 }
+.cal-passado {
+    opacity: 0.3;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+.cal-passado .cal-num { color: #94a3b8; }
 </style>
 </body>
 </html>
