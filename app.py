@@ -855,19 +855,19 @@ def excluir_usuario(id):
     # super_admin nunca pode ser deletado
     if user and user.role == 'super_admin':
         flash("O super admin não pode ser removido.", "danger")
-        return redirect(url_for('painel_unip'))
+        return redirect(url_for('admin_usuarios'))
     # Admin comum não pode deletar outros admins
     if user and not is_super_admin(usuario_logado) and user.role == 'admin':
         flash("Apenas o super admin pode remover administradores.", "danger")
         return redirect(url_for('admin_usuarios'))
     if user and user.role not in ['admin', 'super_admin']:
-        nome_removido = user.login
+        nome_removido = user.nome
         db.session.delete(user)
         db.session.commit()
         registrar_log("EXCLUIR_USUARIO", f"Usuário '{nome_removido}' removido")
-        flash("Usuário removido!", "success")
+        flash(f"Usuário '{nome_removido}' removido com sucesso.", "success")
 
-    return redirect(url_for("painel_unip"))
+    return redirect(url_for("admin_usuarios"))
 
 @app.route("/admin/perfil", methods=["GET", "POST"])
 def admin_perfil():
