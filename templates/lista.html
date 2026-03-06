@@ -723,7 +723,9 @@
         grid.innerHTML = '';
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
-        const hojeStr = new Date().toISOString().split('T')[0];
+        const agora = new Date();
+        const brasilia = new Date(agora.getTime() - (3 * 60 * 60 * 1000));
+        const hojeStr = brasilia.toISOString().split('T')[0];
 
         title.innerText = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentDate).toUpperCase();
 
