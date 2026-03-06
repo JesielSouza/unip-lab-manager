@@ -6,52 +6,151 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
   <style>
-    :root { --unip-blue: #003366; --unip-dark: #002244; --unip-gold: #f5b915; }
-    body { background: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .navbar-unip { background: linear-gradient(90deg, var(--unip-dark) 0%, var(--unip-blue) 100%); border-bottom: 4px solid var(--unip-gold); }
-    .page-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 1.25rem 0; margin-bottom: 1.5rem; }
-    .page-header h4 { font-weight: 800; color: var(--unip-blue); margin: 0; }
-    .page-header .subtitle { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
-    .results-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; }
-    .results-header { padding: 1rem 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
-    .results-title { font-size: 0.72rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-left: 3px solid var(--unip-blue); padding-left: 10px; margin: 0; }
-    .table { margin: 0; font-size: 0.83rem; }
-    .table thead th { background: #f8fafc; color: #475569; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; padding: 10px 16px; }
-    .table tbody td { padding: 12px 16px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; color: #334155; }
-    .table tbody tr:hover td { background: #f8fafc; }
-    .table tbody tr:last-child td { border-bottom: none; }
-    .role-badge { font-size: 0.65rem; font-weight: 800; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; }
-    .role-admin { background: #fef3c7; color: #92400e; }
-    .role-super_admin { background: #003366; color: #f5b915; }
-    .role-coordenador { background: #dbeafe; color: #1e40af; }
-    .role-professor { background: #dcfce7; color: #166534; }
-    .role-aluno { background: #f1f5f9; color: #475569; }
-    .btn-edit { background: none; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px 10px; font-size: 0.72rem; color: var(--unip-blue); cursor: pointer; transition: 0.15s; text-decoration: none; }
+    :root {
+      --unip-blue: #003366;
+      --unip-dark: #002244;
+      --unip-gold: #f5b915;
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; }
+    body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); min-height: 100vh; }
+
+    /* NAVBAR */
+    .navbar-unip { background: var(--unip-dark); border-bottom: 3px solid var(--unip-gold); padding: 0.75rem 0; }
+
+    /* PAGE HEADER */
+    .page-header { background: white; border-bottom: 1px solid var(--border); padding: 1.5rem 0; margin-bottom: 2rem; }
+    .page-header h4 { font-weight: 800; color: var(--unip-blue); font-size: 1.3rem; margin: 0; }
+    .page-header .subtitle { font-size: 0.8rem; color: var(--muted); margin-top: 3px; }
+
+    /* STATS CARDS */
+    .stat-card {
+      background: white;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    .stat-card:hover::after, .stat-card.active::after { transform: scaleX(1); }
+    .stat-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.15); }
+    .stat-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-soft); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--accent); flex-shrink: 0; }
+    .stat-num { font-size: 1.4rem; font-weight: 800; line-height: 1; color: var(--text); }
+    .stat-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-top: 2px; }
+
+    .stat-total { --accent: #003366; --accent-rgb: 0,51,102; --accent-soft: #e8eef7; }
+    .stat-admin { --accent: #7c3aed; --accent-rgb: 124,58,237; --accent-soft: #f3f0ff; }
+    .stat-coord { --accent: #0284c7; --accent-rgb: 2,132,199; --accent-soft: #e0f2fe; }
+    .stat-prof { --accent: #059669; --accent-rgb: 5,150,105; --accent-soft: #d1fae5; }
+    .stat-aluno { --accent: #d97706; --accent-rgb: 217,119,6; --accent-soft: #fef3c7; }
+
+    /* SEARCH BAR */
+    .search-wrap {
+      background: white;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 16px 20px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .search-input-wrap { position: relative; flex: 1; min-width: 200px; }
+    .search-input-wrap i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 0.9rem; }
+    .search-input { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px 9px 36px; font-size: 0.85rem; font-family: 'DM Sans', sans-serif; outline: none; transition: 0.2s; }
+    .search-input:focus { border-color: var(--unip-blue); box-shadow: 0 0 0 3px rgba(0,51,102,0.08); }
+
+    /* TABLE CARD */
+    .table-card { background: white; border-radius: 16px; border: 1px solid var(--border); overflow: hidden; }
+    .table-card-header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fafbfc; }
+    .group-title { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .group-count { background: var(--unip-blue); color: white; font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    thead th { background: #f8fafc; color: #475569; font-size: 0.67rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border); padding: 10px 16px; }
+    tbody td { padding: 12px 16px; vertical-align: middle; border-bottom: 1px solid #f8fafc; color: var(--text); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr { transition: background 0.15s; }
+    tbody tr:hover td { background: #f8fafc; }
+
+    /* ROLE BADGES */
+    .role-badge { font-size: 0.63rem; font-weight: 800; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; font-family: 'DM Mono', monospace; }
+    .role-super_admin { background: var(--unip-dark); color: var(--unip-gold); }
+    .role-admin { background: #f3f0ff; color: #6d28d9; }
+    .role-coordenador { background: #e0f2fe; color: #0369a1; }
+    .role-professor { background: #d1fae5; color: #065f46; }
+    .role-aluno { background: #fef3c7; color: #92400e; }
+
+    /* ACTION BUTTONS */
+    .btn-edit { background: none; border: 1px solid var(--border); border-radius: 7px; padding: 4px 10px; font-size: 0.72rem; color: var(--unip-blue); cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
     .btn-edit:hover { background: var(--unip-blue); color: white; border-color: var(--unip-blue); }
-    .btn-del { background: none; border: 1px solid #fee2e2; border-radius: 8px; padding: 4px 10px; font-size: 0.72rem; color: #991b1b; cursor: pointer; transition: 0.15s; text-decoration: none; }
-    .btn-del:hover { background: #fee2e2; color: #991b1b; }
-    .btn-unip { background: var(--unip-blue); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 0.82rem; padding: 8px 18px; }
+    .btn-del { background: none; border: 1px solid #fee2e2; border-radius: 7px; padding: 4px 10px; font-size: 0.72rem; color: #991b1b; cursor: pointer; transition: 0.15s; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+    .btn-del:hover { background: #fee2e2; }
+    .btn-unip { background: var(--unip-blue); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 0.82rem; padding: 9px 18px; font-family: 'DM Sans', sans-serif; }
     .btn-unip:hover { background: var(--unip-dark); color: white; }
+
+    /* EMPTY STATE */
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+    .empty-state i { font-size: 2.5rem; display: block; margin-bottom: 10px; opacity: 0.4; }
+
+    /* PAGINATION */
+    .pagination-wrap { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-top: 1px solid var(--border); background: #fafbfc; font-size: 0.78rem; color: var(--muted); }
+    .pagination-btns { display: flex; gap: 4px; }
+    .page-btn { border: 1px solid var(--border); background: white; border-radius: 7px; padding: 4px 10px; font-size: 0.75rem; cursor: pointer; transition: 0.15s; font-family: 'DM Sans', sans-serif; }
+    .page-btn:hover, .page-btn.active { background: var(--unip-blue); color: white; border-color: var(--unip-blue); }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* HIDDEN */
+    .user-row { }
+    .user-row.hidden { display: none; }
+    .group-section.hidden { display: none; }
   </style>
 </head>
 <body>
+
 <nav class="navbar navbar-dark navbar-unip shadow mb-0 py-2">
   <div class="container d-flex justify-content-between align-items-center">
     <a class="navbar-brand fw-bold" href="{{ url_for('painel_unip') }}"><i class="bi bi-cpu-fill me-2"></i> UNIP LAB MANAGER</a>
     <a href="{{ url_for('painel_unip') }}" class="btn btn-sm btn-outline-light border-0 fw-bold"><i class="bi bi-arrow-left me-1"></i> Painel</a>
   </div>
 </nav>
+
 <div class="page-header">
   <div class="container d-flex justify-content-between align-items-center">
     <div>
       <h4><i class="bi bi-people me-2"></i>Gerenciar Usuários</h4>
-      <div class="subtitle">Visualize e edite os usuários do sistema</div>
+      <div class="subtitle">Visualize, filtre e edite os usuários do sistema</div>
     </div>
-    <button class="btn btn-unip" data-bs-toggle="modal" data-bs-target="#modalNovoUsuario"><i class="bi bi-person-plus me-1"></i> Novo Usuário</button>
+    <button class="btn btn-unip" data-bs-toggle="modal" data-bs-target="#modalNovoUsuario">
+      <i class="bi bi-person-plus me-1"></i> Novo Usuário
+    </button>
   </div>
 </div>
+
 <div class="container pb-5">
+
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}{% for category, message in messages %}
       <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 shadow-sm mb-3 border-0">
@@ -59,13 +158,90 @@
       </div>
     {% endfor %}{% endif %}
   {% endwith %}
-  <div class="results-card">
-    <div class="results-header">
-      <span class="results-title"><i class="bi bi-people me-2"></i>Usuários Cadastrados</span>
-      <span style="font-size:0.75rem;font-weight:700;color:white;background:var(--unip-blue);padding:3px 10px;border-radius:20px;">{{ usuarios|length }} usuário{{ 's' if usuarios|length != 1 }}</span>
+
+  {# ── CONTADORES POR ROLE ── #}
+  {% set admins = usuarios|selectattr('role','in',['admin','super_admin'])|list %}
+  {% set coords = usuarios|selectattr('role','equalto','coordenador')|list %}
+  {% set profs  = usuarios|selectattr('role','equalto','professor')|list %}
+  {% set alunos = usuarios|selectattr('role','equalto','aluno')|list %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-2">
+      <div class="stat-card stat-total" onclick="filtrarRole('todos')" id="stat-todos">
+        <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+        <div>
+          <div class="stat-num">{{ usuarios|length }}</div>
+          <div class="stat-label">Total</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="stat-card stat-admin" onclick="filtrarRole('admin')" id="stat-admin">
+        <div class="stat-icon"><i class="bi bi-shield-fill"></i></div>
+        <div>
+          <div class="stat-num">{{ admins|length }}</div>
+          <div class="stat-label">Admins</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card stat-coord" onclick="filtrarRole('coordenador')" id="stat-coordenador">
+        <div class="stat-icon"><i class="bi bi-person-badge-fill"></i></div>
+        <div>
+          <div class="stat-num">{{ coords|length }}</div>
+          <div class="stat-label">Coordenadores</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="stat-card stat-prof" onclick="filtrarRole('professor')" id="stat-professor">
+        <div class="stat-icon"><i class="bi bi-mortarboard-fill"></i></div>
+        <div>
+          <div class="stat-num">{{ profs|length }}</div>
+          <div class="stat-label">Professores</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card stat-aluno" onclick="filtrarRole('aluno')" id="stat-aluno">
+        <div class="stat-icon"><i class="bi bi-person-fill"></i></div>
+        <div>
+          <div class="stat-num">{{ alunos|length }}</div>
+          <div class="stat-label">Alunos</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── BUSCA ── #}
+  <div class="search-wrap">
+    <div class="search-input-wrap">
+      <i class="bi bi-search"></i>
+      <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nome, login ou e-mail..." oninput="buscar()">
+    </div>
+    <span id="resultCount" style="font-size:0.78rem;color:var(--muted);white-space:nowrap;"></span>
+  </div>
+
+  {# ── GRUPOS ── #}
+  {% set grupos = [
+    ('Administradores', 'admin', admins, 'bi-shield-fill', '#6d28d9'),
+    ('Coordenadores', 'coordenador', coords, 'bi-person-badge-fill', '#0369a1'),
+    ('Professores', 'professor', profs, 'bi-mortarboard-fill', '#065f46'),
+    ('Alunos', 'aluno', alunos, 'bi-person-fill', '#92400e')
+  ] %}
+
+  {% for titulo, role_key, membros, icone, cor in grupos %}
+  {% if membros %}
+  <div class="table-card mb-4 group-section" id="group-{{ role_key }}" data-role="{{ role_key }}">
+    <div class="table-card-header">
+      <div class="group-title">
+        <i class="bi {{ icone }}" style="color:{{ cor }}"></i>
+        {{ titulo }}
+        <span class="group-count" id="count-{{ role_key }}">{{ membros|length }}</span>
+      </div>
     </div>
     <div class="table-responsive">
-      <table class="table">
+      <table>
         <thead>
           <tr>
             <th>Nome</th>
@@ -76,19 +252,21 @@
             <th class="text-end pe-4">Ações</th>
           </tr>
         </thead>
-        <tbody>
-          {% for u in usuarios %}
-          <tr>
+        <tbody id="tbody-{{ role_key }}">
+          {% for u in membros %}
+          <tr class="user-row" 
+              data-nome="{{ u.nome|lower }}" 
+              data-login="{{ u.login|lower }}" 
+              data-email="{{ u.email|lower }}"
+              data-role="{{ u.role }}">
             <td class="fw-bold">{{ u.nome }}</td>
-            <td class="text-muted small">{{ u.login }}</td>
-            <td class="small">{{ u.email }}</td>
-            <td>
-              <span class="role-badge role-{{ u.role }}">{{ u.role }}</span>
-            </td>
+            <td class="text-muted" style="font-family:'DM Mono',monospace;font-size:0.78rem">{{ u.login }}</td>
+            <td class="small text-muted">{{ u.email }}</td>
+            <td><span class="role-badge role-{{ u.role }}">{{ u.role }}</span></td>
             <td class="small text-muted">{{ u.turma_rel.nome if u.turma_rel else '—' }}</td>
             <td class="text-end pe-4">
               {% if u.role not in ['admin', 'super_admin'] or (usuario_logado.role == 'super_admin' and u.role == 'admin') %}
-              <a href="/admin/editar_usuario/{{ u.id }}" class="btn-edit me-1"><i class="bi bi-pencil me-1"></i>Editar</a>
+              <a href="/admin/editar_usuario/{{ u.id }}" class="btn-edit me-1"><i class="bi bi-pencil"></i> Editar</a>
               {% if u.role != 'super_admin' %}
               <a href="/admin/excluir_usuario/{{ u.id }}" class="btn-del" onclick="return confirm('Excluir {{ u.nome }}?')"><i class="bi bi-trash"></i></a>
               {% endif %}
@@ -99,9 +277,26 @@
         </tbody>
       </table>
     </div>
+    {# Paginação por grupo #}
+    <div class="pagination-wrap" id="pag-{{ role_key }}" style="display:none">
+      <span id="pag-info-{{ role_key }}"></span>
+      <div class="pagination-btns" id="pag-btns-{{ role_key }}"></div>
+    </div>
   </div>
+  {% endif %}
+  {% endfor %}
+
+  <div id="emptyState" class="table-card" style="display:none">
+    <div class="empty-state">
+      <i class="bi bi-person-x"></i>
+      <div style="font-weight:700">Nenhum usuário encontrado</div>
+      <div style="font-size:0.8rem;margin-top:4px">Tente buscar por outro termo</div>
+    </div>
+  </div>
+
 </div>
-<!-- Modal Novo Usuário -->
+
+{# ── MODAL NOVO USUÁRIO (inalterado) ── #}
 <div class="modal fade" id="modalNovoUsuario" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content rounded-4 border-0 shadow">
@@ -176,6 +371,142 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+const POR_PAGINA = 10;
+let filtroAtivo = 'todos';
+let paginasAtuais = {};
+
+// ── FILTRO POR ROLE ──────────────────────────────────────────────────────
+function filtrarRole(role) {
+  filtroAtivo = role;
+
+  // Atualiza estado dos stat cards
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById('stat-' + (role === 'todos' ? 'todos' : role));
+  if (card) card.classList.add('active');
+
+  // Mostra/oculta grupos
+  document.querySelectorAll('.group-section').forEach(g => {
+    const gr = g.dataset.role;
+    if (role === 'todos' || gr === role || (role === 'admin' && (gr === 'admin' || gr === 'super_admin'))) {
+      g.classList.remove('hidden');
+    } else {
+      g.classList.add('hidden');
+    }
+  });
+
+  buscar();
+}
+
+// ── BUSCA ────────────────────────────────────────────────────────────────
+function buscar() {
+  const termo = document.getElementById('searchInput').value.toLowerCase().trim();
+  let totalVisiveis = 0;
+
+  document.querySelectorAll('.group-section').forEach(grupo => {
+    if (grupo.classList.contains('hidden')) return;
+    const role = grupo.dataset.role;
+    const rows = grupo.querySelectorAll('.user-row');
+    let visiveis = [];
+
+    rows.forEach(row => {
+      const match = !termo ||
+        row.dataset.nome.includes(termo) ||
+        row.dataset.login.includes(termo) ||
+        row.dataset.email.includes(termo);
+      if (match) visiveis.push(row);
+    });
+
+    // Atualiza contador do grupo
+    const cnt = document.getElementById('count-' + role);
+    if (cnt) cnt.textContent = visiveis.length;
+
+    totalVisiveis += visiveis.length;
+
+    // Oculta grupo se não tem resultados
+    if (visiveis.length === 0) {
+      grupo.classList.add('hidden');
+    } else {
+      grupo.classList.remove('hidden');
+      paginar(role, visiveis, 1);
+    }
+  });
+
+  // Empty state
+  document.getElementById('emptyState').style.display = totalVisiveis === 0 ? 'block' : 'none';
+
+  // Resultado count
+  const rc = document.getElementById('resultCount');
+  rc.textContent = termo ? `${totalVisiveis} resultado${totalVisiveis !== 1 ? 's' : ''} encontrado${totalVisiveis !== 1 ? 's' : ''}` : '';
+}
+
+// ── PAGINAÇÃO ────────────────────────────────────────────────────────────
+function paginar(role, rows, pagina) {
+  paginasAtuais[role] = pagina;
+  const total = rows.length;
+  const totalPags = Math.ceil(total / POR_PAGINA);
+  const inicio = (pagina - 1) * POR_PAGINA;
+  const fim = inicio + POR_PAGINA;
+
+  rows.forEach((row, i) => {
+    row.classList.toggle('hidden', i < inicio || i >= fim);
+  });
+
+  // Mostra/oculta paginação
+  const pagWrap = document.getElementById('pag-' + role);
+  if (!pagWrap) return;
+
+  if (totalPags <= 1) {
+    pagWrap.style.display = 'none';
+    return;
+  }
+
+  pagWrap.style.display = 'flex';
+  document.getElementById('pag-info-' + role).textContent =
+    `Mostrando ${inicio + 1}–${Math.min(fim, total)} de ${total}`;
+
+  const btns = document.getElementById('pag-btns-' + role);
+  btns.innerHTML = '';
+
+  // Anterior
+  const prev = document.createElement('button');
+  prev.className = 'page-btn';
+  prev.innerHTML = '<i class="bi bi-chevron-left"></i>';
+  prev.disabled = pagina === 1;
+  prev.onclick = () => paginar(role, rows, pagina - 1);
+  btns.appendChild(prev);
+
+  // Números
+  for (let p = 1; p <= totalPags; p++) {
+    const btn = document.createElement('button');
+    btn.className = 'page-btn' + (p === pagina ? ' active' : '');
+    btn.textContent = p;
+    btn.onclick = () => paginar(role, rows, p);
+    btns.appendChild(btn);
+  }
+
+  // Próximo
+  const next = document.createElement('button');
+  next.className = 'page-btn';
+  next.innerHTML = '<i class="bi bi-chevron-right"></i>';
+  next.disabled = pagina === totalPags;
+  next.onclick = () => paginar(role, rows, pagina + 1);
+  btns.appendChild(next);
+}
+
+// ── INICIALIZA ───────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Ativa "todos" por padrão
+  const statTodos = document.getElementById('stat-todos');
+  if (statTodos) statTodos.classList.add('active');
+
+  // Inicializa paginação de cada grupo
+  document.querySelectorAll('.group-section').forEach(grupo => {
+    const role = grupo.dataset.role;
+    const rows = Array.from(grupo.querySelectorAll('.user-row'));
+    if (rows.length > POR_PAGINA) paginar(role, rows, 1);
+  });
+});
+
 function toggleModalAluno() {
   var role = document.getElementById('modal_role').value;
   document.getElementById('modal_campos_aluno').style.display = role === 'aluno' ? 'block' : 'none';
