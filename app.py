@@ -11,6 +11,8 @@ import secrets
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import threading
+import time
+from collections import defaultdict
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-troque-em-producao")
@@ -20,6 +22,27 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Armazena token ativo por login (sessão única)
 _sessoes_ativas = {}
+
+# ── RATE LIMITING DE LOGIN ────────────────────────────────────
+# { ip: [timestamp, timestamp, ...] }
+_tentativas_login = defaultdict(list)
+LIMITE_TENTATIVAS = 5      # máximo de tentativas
+JANELA_SEGUNDOS   = 300    # janela de 5 minutos
+BLOQUEIO_SEGUNDOS = 900    # bloqueio por 15 minutos após exceder
+
+def _ip_bloqueado(ip):
+    """Retorna (bloqueado, segundos_restantes) para o IP."""
+    agora = time.time()
+    tentativas = _tentativas_login[ip]
+    # Remove tentativas fora da janela
+    _tentativas_login[ip] = [t for t in tentativas if agora - t < JANELA_SEGUNDOS]
+    tentativas = _tentativas_login[ip]
+    if len(tentativas) >= LIMITE_TENTATIVAS:
+        mais_recente = max(tentativas)
+        restante = int(BLOQUEIO_SEGUNDOS - (agora - mais_recente))
+        if restante > 0:
+            return True, restante
+    return False, 0
 
 # ── FUNÇÃO DE EMAIL ──────────────────────────────────────────
 def _enviar_email_worker(destinatario, assunto, corpo_html):
@@ -246,13 +269,22 @@ def index():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        ip = request.remote_addr or "unknown"
+        bloqueado, restante = _ip_bloqueado(ip)
+
+        if bloqueado:
+            minutos = restante // 60
+            segundos = restante % 60
+            flash(f"Muitas tentativas incorretas. Tente novamente em {minutos}m {segundos}s.", "danger")
+            return render_template("login.html")
+
         login_form = request.form["usuario"]
         senha_form = request.form["senha"]
         
         usuario = Usuario.query.filter_by(login=login_form).first()
         
         if not usuario:
-            # Em vez de 404, podemos usar o flash para ficar mais bonito na tela
+            _tentativas_login[ip].append(time.time())
             flash("Usuário não encontrado", "danger")
             return render_template("login.html")
 
@@ -261,6 +293,8 @@ def login():
             return render_template("login.html")
 
         if bcrypt.checkpw(senha_form.encode(), usuario.senha_hash.encode()):
+            # Login bem-sucedido — limpa tentativas do IP
+            _tentativas_login[ip] = []
             session.clear()
             token = secrets.token_hex(32)
             session["usuario"] = usuario.login
@@ -271,7 +305,12 @@ def login():
             registrar_log("LOGIN", f"Login realizado por {usuario.nome} ({usuario.role})")
             return redirect("/painel_unip")
         else:
-            flash("Senha Incorreta", "danger")
+            _tentativas_login[ip].append(time.time())
+            tentativas_restantes = LIMITE_TENTATIVAS - len(_tentativas_login[ip])
+            if tentativas_restantes > 0:
+                flash(f"Senha incorreta. {tentativas_restantes} tentativa(s) restante(s).", "danger")
+            else:
+                flash("Muitas tentativas incorretas. Acesso bloqueado por 15 minutos.", "danger")
             return render_template("login.html")
             
     return render_template("login.html")
