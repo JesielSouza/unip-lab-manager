@@ -151,33 +151,30 @@
 </head>
 <body>
 
-  <nav class="navbar navbar-expand-lg navbar-dark navbar-unip shadow-sm mb-4">
-    <div class="container">
-      <span class="navbar-brand fw-bold"><i class="bi bi-mortarboard-fill me-2"></i> UNIP Lab Manager</span>
-      
-      <div class="navbar-nav ms-auto align-items-center text-light small">
-        <!-- Acesso à Gestão: Aparece apenas para Admin e Coordenador -->
+  <nav class="navbar navbar-dark navbar-unip shadow-sm mb-4" style="padding:0.6rem 0;">
+    <div class="container d-flex align-items-center justify-content-between gap-2">
+      <span class="navbar-brand fw-bold mb-0" style="font-size:0.95rem;">
+        <i class="bi bi-mortarboard-fill me-1"></i> UNIP Lab Manager
+      </span>
+      <div class="d-flex align-items-center gap-1 flex-wrap justify-content-end">
         {% if role in ['admin', 'coordenador'] %}
-        <a class="btn btn-warning btn-sm me-3 fw-bold shadow-sm" href="/coordenador/reservas">
+        <a class="btn btn-warning btn-sm fw-bold" href="/coordenador/reservas" style="font-size:0.72rem;padding:4px 8px;">
             <i class="bi bi-shield-lock-fill me-1"></i> GESTÃO
         </a>
         {% endif %}
-
         {% if role == 'admin' %}
-        <button class="btn btn-outline-light btn-sm me-2 notif-btn" onclick="abrirNotif()" title="Notificações">
+        <button class="btn btn-outline-light btn-sm notif-btn" onclick="abrirNotif()" title="Notificações" style="padding:4px 8px;">
             <i class="bi bi-bell-fill"></i>
             {% set total_notif = reservas|selectattr('status','in',['pending','pre_approved'])|list|length %}
             <span class="notif-badge" id="notifBadge" style="{{ 'display:none' if total_notif == 0 else '' }}">
                 {{ total_notif if total_notif < 10 else '9+' }}
             </span>
         </button>
+        <a class="btn btn-outline-light btn-sm" href="{{ url_for('admin_perfil') }}" style="font-size:0.72rem;padding:4px 8px;">
+          <i class="bi bi-person-circle"></i>
+        </a>
         {% endif %}
-
-        <span class="me-3">Usuário: <strong>{{ usuario.nome }}</strong> ({{ role }})</span>
-        {% if role == 'admin' %}
-        <a class="btn btn-outline-light btn-sm me-2" href="{{ url_for('admin_perfil') }}"><i class="bi bi-person-circle me-1"></i>Perfil</a>
-        {% endif %}
-        <a class="btn btn-outline-light btn-sm" href="/logout">Sair</a>
+        <a class="btn btn-outline-light btn-sm" href="/logout" style="font-size:0.72rem;padding:4px 8px;">Sair</a>
       </div>
     </div>
   </nav>
