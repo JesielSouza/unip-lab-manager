@@ -825,6 +825,10 @@
         document.getElementById('notifDrawer').classList.add('open');
         document.body.style.overflow = 'hidden';
         notifAberta = true;
+        // Sempre busca dados frescos ao abrir
+        fetch('/api/notificacoes').then(r => r.json()).then(data => {
+            if (!data.erro) atualizarDrawer(data.reservas);
+        }).catch(() => {});
     }
     function fecharNotif() {
         document.getElementById('notifOverlay').style.display = 'none';
