@@ -1030,6 +1030,20 @@ def aprovar_reserva(id):
     reserva = ReservaLab.query.get_or_404(id)
     
     if is_admin(usuario):
+        # Revalidar conflito antes de aprovar
+        conflito = ReservaLab.query.filter(
+            ReservaLab.id != id,
+            ReservaLab.laboratorio_id == reserva.laboratorio_id,
+            ReservaLab.data == reserva.data,
+            ReservaLab.horario_inicio < reserva.horario_fim,
+            ReservaLab.horario_fim > reserva.horario_inicio,
+            ReservaLab.status == 'approved'
+        ).first()
+        if conflito:
+            flash(f"Conflito detectado! {conflito.lab.nome} já está aprovado para {conflito.professor} neste horário. Aprovação bloqueada.", "danger")
+            db.session.rollback()
+            return redirect(url_for("coordenador_reservas"))
+
         reserva.status = 'approved'
         registrar_log("APROVAR_RESERVA", f"Reserva #{id} aprovada definitivamente")
         flash("Reserva finalizada com sucesso!", "success")
@@ -1059,6 +1073,19 @@ def aprovar_reserva(id):
             )
     elif usuario.role == 'coordenador':
         if reserva.status == 'pending':
+            # Revalidar conflito antes de pré-aprovar
+            conflito = ReservaLab.query.filter(
+                ReservaLab.id != id,
+                ReservaLab.laboratorio_id == reserva.laboratorio_id,
+                ReservaLab.data == reserva.data,
+                ReservaLab.horario_inicio < reserva.horario_fim,
+                ReservaLab.horario_fim > reserva.horario_inicio,
+                ReservaLab.status.in_(['approved', 'pre_approved'])
+            ).first()
+            if conflito:
+                flash(f"Conflito detectado! {conflito.lab.nome} já tem uma reserva aprovada neste horário para {conflito.professor}. Pré-aprovação bloqueada.", "danger")
+                return redirect(url_for("coordenador_reservas"))
+
             reserva.status = 'pre_approved'
             registrar_log("PRE_APROVAR_RESERVA", f"Reserva #{id} pré-aprovada")
             flash("Pré-aprovação realizada! Aguardando Admin.", "info")
