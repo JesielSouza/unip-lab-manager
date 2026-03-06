@@ -862,6 +862,8 @@ def excluir_usuario(id):
         return redirect(url_for('admin_usuarios'))
     if user and user.role not in ['admin', 'super_admin']:
         nome_removido = user.nome
+        # Remove reservas vinculadas antes para evitar ForeignKeyViolation
+        ReservaLab.query.filter_by(usuario_id=user.id).delete()
         db.session.delete(user)
         db.session.commit()
         registrar_log("EXCLUIR_USUARIO", f"Usuário '{nome_removido}' removido")
