@@ -199,41 +199,32 @@
     .stat-num { font-size: 1.6rem; font-weight: 800; color: var(--unip-blue); line-height: 1; }
     .stat-label { font-size: 0.65rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-top: 4px; }
   
-
-    @media (max-width: 768px) {
-      .row.g-3 [class*='col-md-3'] { width: 100% !important; }
-      .stat-card { padding: 0.75rem 1rem; }
-      .stat-num { font-size: 1.3rem; }
-    }
     /* ── MOBILE RESPONSIVO ─────────────────────────────────── */
     @media (max-width: 768px) {
       .container { padding-left: 12px; padding-right: 12px; }
       .page-header { padding: 1rem 0; }
       .page-header h4 { font-size: 1.1rem; }
-      .page-header .d-flex { flex-wrap: wrap; gap: 8px; }
+      .stat-card { padding: 0.75rem 1rem; }
+      .stat-num { font-size: 1.3rem; }
+      /* Stats 2x2 em mobile */
+      .row.g-3.mb-4 > .col-6 { width: 50% !important; }
+      .row.g-3.mb-4 > .col-md-3 { width: 50% !important; }
+      /* Filtros em coluna */
+      .row.g-3.align-items-end > [class*='col-md'] { width: 100% !important; }
+      .filter-card { padding: 1rem; }
+      /* Tabela scroll */
       .table-responsive { -webkit-overflow-scrolling: touch; }
-      .table { font-size: 0.78rem; }
-      .table thead th, .table tbody td { padding: 8px 10px; }
-      .results-card { border-radius: 12px; }
-      .filter-bar, .filter-card { flex-direction: column; }
-      .filter-bar input, .filter-bar select { min-width: unset !important; width: 100%; }
-      .btn { font-size: 0.8rem; }
-      .d-flex.gap-3 { gap: 8px !important; }
-      .d-flex.gap-2 { gap: 6px !important; }
-      .row.g-4 > [class*='col-'] { margin-bottom: 0; }
+      .table { font-size: 0.75rem; }
+      .table thead th, .table tbody td { padding: 8px 8px; }
+      /* Esconde colunas menos importantes */
+      .table thead th:nth-child(3),
+      .table tbody td:nth-child(3) { display: none; } /* turma */
+      .table thead th:nth-child(6),
+      .table tbody td:nth-child(6) { display: none; } /* horário */
     }
     @media (max-width: 480px) {
-      body { font-size: 0.9rem; }
-      .navbar-brand { font-size: 0.85rem; }
-      h4 { font-size: 1rem !important; }
-      .form-control, .form-select, input, select, textarea {
-        font-size: 16px !important; /* evita zoom no iOS */
-        border-radius: 10px;
-      }
-      .btn-unip, .btn-login, .btn-salvar, .btn-filtrar, .btn-interditar {
-        width: 100%;
-        margin-bottom: 6px;
-      }
+      .form-control, .form-select { font-size: 16px !important; }
+      .btn-filtrar, .btn-limpar { width: 100%; margin-bottom: 4px; }
     }
   </style>
 </head>

@@ -100,77 +100,35 @@
         border-top: 1px solid #f1f5f9;
         flex-shrink: 0;
     }
-  
-
-    @media (max-width: 768px) {
-      .reserva-card { padding: 12px !important; }
-      .reserva-card .d-flex { flex-wrap: wrap; }
-      .btn-group-actions { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-top: 8px; }
-      .notif-drawer { width: 100% !important; }
-      .calendar-wrap { display: none; } /* oculta calendário lateral em mobile */
-      .col-md-7, .col-lg-8 { width: 100% !important; }
-    }
-    /* ── MOBILE RESPONSIVO ─────────────────────────────────── */
-    @media (max-width: 768px) {
-      .container { padding-left: 12px; padding-right: 12px; }
-      .page-header { padding: 1rem 0; }
-      .page-header h4 { font-size: 1.1rem; }
-      .page-header .d-flex { flex-wrap: wrap; gap: 8px; }
-      .table-responsive { -webkit-overflow-scrolling: touch; }
-      .table { font-size: 0.78rem; }
-      .table thead th, .table tbody td { padding: 8px 10px; }
-      .results-card { border-radius: 12px; }
-      .filter-bar, .filter-card { flex-direction: column; }
-      .filter-bar input, .filter-bar select { min-width: unset !important; width: 100%; }
-      .btn { font-size: 0.8rem; }
-      .d-flex.gap-3 { gap: 8px !important; }
-      .d-flex.gap-2 { gap: 6px !important; }
-      .row.g-4 > [class*='col-'] { margin-bottom: 0; }
-    }
-    @media (max-width: 480px) {
-      body { font-size: 0.9rem; }
-      .navbar-brand { font-size: 0.85rem; }
-      h4 { font-size: 1rem !important; }
-      .form-control, .form-select, input, select, textarea {
-        font-size: 16px !important; /* evita zoom no iOS */
-        border-radius: 10px;
-      }
-      .btn-unip, .btn-login, .btn-salvar, .btn-filtrar, .btn-interditar {
-        width: 100%;
-        margin-bottom: 6px;
-      }
-    }
   </style>
 </head>
 <body>
 
-  <nav class="navbar navbar-expand-lg navbar-dark navbar-unip shadow-sm mb-4">
-    <div class="container">
-      <span class="navbar-brand fw-bold"><i class="bi bi-mortarboard-fill me-2"></i> UNIP Lab Manager</span>
-      
-      <div class="navbar-nav ms-auto align-items-center text-light small">
-        <!-- Acesso à Gestão: Aparece apenas para Admin e Coordenador -->
+  <nav class="navbar navbar-dark navbar-unip shadow-sm mb-4" style="padding:0.6rem 0;">
+    <div class="container d-flex align-items-center justify-content-between gap-2">
+      <span class="navbar-brand fw-bold mb-0" style="font-size:0.95rem;">
+        <i class="bi bi-mortarboard-fill me-1"></i> UNIP Lab Manager
+      </span>
+      <div class="d-flex align-items-center gap-1 flex-wrap justify-content-end">
         {% if role in ['admin', 'coordenador'] %}
-        <a class="btn btn-warning btn-sm me-3 fw-bold shadow-sm" href="/coordenador/reservas">
+        <a class="btn btn-warning btn-sm fw-bold shadow-sm" href="/coordenador/reservas" style="font-size:0.72rem;padding:4px 8px;">
             <i class="bi bi-shield-lock-fill me-1"></i> GESTÃO
         </a>
         {% endif %}
-
         {% if role == 'admin' %}
-        <button class="btn btn-outline-light btn-sm me-2 notif-btn" onclick="abrirNotif()" title="Notificações">
+        <button class="btn btn-outline-light btn-sm notif-btn" onclick="abrirNotif()" title="Notificações" style="padding:4px 8px;">
             <i class="bi bi-bell-fill"></i>
             {% set total_notif = reservas|selectattr('status','in',['pending','pre_approved'])|list|length %}
             <span class="notif-badge" id="notifBadge" style="{{ 'display:none' if total_notif == 0 else '' }}">
                 {{ total_notif if total_notif < 10 else '9+' }}
             </span>
         </button>
+        <a class="btn btn-outline-light btn-sm" href="{{ url_for('admin_perfil') }}" style="font-size:0.72rem;padding:4px 8px;">
+          <i class="bi bi-person-circle me-1"></i><span class="d-none d-md-inline">Perfil</span>
+        </a>
         {% endif %}
-
-        <span class="me-3">Usuário: <strong>{{ usuario.nome }}</strong> ({{ role }})</span>
-        {% if role == 'admin' %}
-        <a class="btn btn-outline-light btn-sm me-2" href="{{ url_for('admin_perfil') }}"><i class="bi bi-person-circle me-1"></i>Perfil</a>
-        {% endif %}
-        <a class="btn btn-outline-light btn-sm" href="/logout">Sair</a>
+        <span class="text-white-50 small d-none d-md-inline">{{ usuario.nome }}</span>
+        <a class="btn btn-outline-light btn-sm" href="/logout" style="font-size:0.72rem;padding:4px 8px;">Sair</a>
       </div>
     </div>
   </nav>
