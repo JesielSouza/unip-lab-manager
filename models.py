@@ -22,6 +22,10 @@ class Usuario(db.Model):
     # Status de segurança (para evitar a 'sacanagem' de professores e coordenadores)
     ativo = db.Column(db.Boolean, default=True)
 
+    # Reset de senha
+    reset_token = db.Column(db.String(64), nullable=True)
+    reset_token_expiry = db.Column(db.DateTime, nullable=True)
+
 class Laboratorio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(50), unique=True, nullable=False)

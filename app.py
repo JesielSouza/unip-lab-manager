@@ -1259,6 +1259,98 @@ def admin_logs():
     logs = LogAuditoria.query.order_by(LogAuditoria.timestamp.desc()).limit(500).all()
     return render_template("admin_logs.html", logs=logs, usuario=usuario)
 
+@app.route("/esqueci_senha", methods=["GET", "POST"])
+def esqueci_senha():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        usuario = Usuario.query.filter_by(email=email).first()
+
+        # Resposta genérica para não vazar se email existe
+        msg_generica = "Se este email estiver cadastrado, você receberá as instruções. Caso não receba, entre em contato com o administrador."
+
+        if usuario:
+            token = secrets.token_urlsafe(32)
+            usuario.reset_token = token
+            usuario.reset_token_expiry = datetime.utcnow() + __import__('datetime').timedelta(hours=2)
+            db.session.commit()
+            registrar_log("RESET_SENHA_SOLICITADO", f"Solicitação de reset para {email}")
+
+            # Tenta enviar email
+            link = url_for('redefinir_senha', token=token, _external=True)
+            enviado = False
+            try:
+                enviado = enviar_email(
+                    email,
+                    "🔑 Redefinição de senha — UNIP Lab Manager",
+                    f"""<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+                        <div style="background:#003366;padding:20px;text-align:center">
+                            <h2 style="color:#f5b915;margin:0">UNIP Lab Manager</h2>
+                        </div>
+                        <div style="padding:24px;background:#f8f9fa">
+                            <h3 style="color:#003366">Redefinição de Senha</h3>
+                            <p>Olá, <strong>{usuario.nome}</strong>!</p>
+                            <p>Clique no botão abaixo para redefinir sua senha. O link expira em <strong>2 horas</strong>.</p>
+                            <div style="text-align:center;margin:24px 0">
+                                <a href="{link}" style="background:#003366;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">
+                                    Redefinir Senha
+                                </a>
+                            </div>
+                            <p style="color:#6c757d;font-size:0.85rem">Se não solicitou, ignore este email.</p>
+                        </div>
+                    </div>"""
+                )
+            except:
+                pass
+
+            if not enviado:
+                # SMTP bloqueado — orientar contato com admin
+                flash(f"Email não pôde ser enviado automaticamente. Entre em contato com o administrador informando seu login para que ele redefina sua senha.", "warning")
+                return render_template("login.html")
+
+        flash(msg_generica, "info")
+        return redirect(url_for("login"))
+
+    return render_template("esqueci_senha.html")
+
+
+@app.route("/redefinir_senha/<token>", methods=["GET", "POST"])
+def redefinir_senha(token):
+    usuario = Usuario.query.filter_by(reset_token=token).first()
+
+    if not usuario or not usuario.reset_token_expiry:
+        flash("Link inválido ou expirado.", "danger")
+        return redirect(url_for("login"))
+
+    if datetime.utcnow() > usuario.reset_token_expiry:
+        usuario.reset_token = None
+        usuario.reset_token_expiry = None
+        db.session.commit()
+        flash("Este link expirou. Solicite um novo.", "danger")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        nova_senha = request.form.get("nova_senha", "")
+        confirmar = request.form.get("confirmar_senha", "")
+
+        if len(nova_senha) < 6:
+            flash("A senha deve ter pelo menos 6 caracteres.", "danger")
+            return render_template("redefinir_senha.html", token=token)
+
+        if nova_senha != confirmar:
+            flash("As senhas não coincidem.", "danger")
+            return render_template("redefinir_senha.html", token=token)
+
+        usuario.senha_hash = bcrypt.hashpw(nova_senha.encode(), bcrypt.gensalt()).decode()
+        usuario.reset_token = None
+        usuario.reset_token_expiry = None
+        db.session.commit()
+        registrar_log("RESET_SENHA_CONCLUIDO", f"Senha redefinida para {usuario.login}")
+        flash("Senha redefinida com sucesso! Faça login.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("redefinir_senha.html", token=token)
+
+
 @app.route("/logout")
 def logout():
     registrar_log("LOGOUT", f"Logout realizado")
