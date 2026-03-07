@@ -121,8 +121,12 @@
                         {% with messages = get_flashed_messages(with_categories=true) %}
                           {% if messages %}
                             {% for category, message in messages %}
-                              <div class="alert alert-{{ category }} small py-2 mb-4">
-                                <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ message }}
+                              <div class="alert alert-{{ category }} small py-2 mb-4 d-flex align-items-center gap-2">
+                                {% if category == 'success' %}<i class="bi bi-check-circle-fill text-success"></i>
+                                {% elif category == 'danger' %}<i class="bi bi-x-circle-fill text-danger"></i>
+                                {% elif category == 'warning' %}<i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                                {% else %}<i class="bi bi-info-circle-fill text-info"></i>{% endif %}
+                                {{ message }}
                               </div>
                             {% endfor %}
                           {% endif %}

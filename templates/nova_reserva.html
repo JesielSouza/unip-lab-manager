@@ -107,7 +107,7 @@
       {% if messages %}
         {% for category, message in messages %}
           <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm border-0 mb-3 rounded-3">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ message }}
+            {% if category == 'success' %}<i class="bi bi-check-circle-fill text-success me-2"></i>{% elif category in ['danger','error'] %}<i class="bi bi-x-circle-fill text-danger me-2"></i>{% elif category == 'warning' %}<i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>{% else %}<i class="bi bi-info-circle-fill text-info me-2"></i>{% endif %} {{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
           </div>
         {% endfor %}
@@ -361,22 +361,8 @@ function renderCalendar() {
             cell.appendChild(dotsWrap);
 
             // Tooltip
-            // Desktop: hover
             cell.addEventListener('mouseenter', (e) => mostrarTooltip(e, dateStr, evs));
-            cell.addEventListener('mouseleave', (e) => {
-                // Só esconde no mouseleave se não for touch
-                if (!isTouchDevice()) esconderTooltip();
-            });
-            // Mobile: tap abre/fecha
-            cell.addEventListener('click', (e) => {
-                const tip = document.getElementById('cal-tooltip');
-                if (tip.style.display === 'block') {
-                    esconderTooltip();
-                } else {
-                    mostrarTooltip(e, dateStr, evs);
-                    e.stopPropagation();
-                }
-            });
+            cell.addEventListener('mouseleave', esconderTooltip);
         }
 
         // Clique para selecionar data — bloqueia datas passadas
@@ -427,18 +413,6 @@ function mostrarTooltip(e, dateStr, evs) {
 function esconderTooltip() {
     document.getElementById('cal-tooltip').style.display = 'none';
 }
-
-function isTouchDevice() {
-    return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-}
-
-// Fecha tooltip ao clicar fora
-document.addEventListener('click', function(e) {
-    const tip = document.getElementById('cal-tooltip');
-    if (tip && !tip.contains(e.target) && !e.target.closest('.cal-day')) {
-        esconderTooltip();
-    }
-});
 
 function changeMonth(offset) {
     currentDate.setMonth(currentDate.getMonth() + offset);

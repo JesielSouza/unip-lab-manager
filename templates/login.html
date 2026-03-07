@@ -3,322 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <title>UNIP Lab Manager | Login Institucional</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --unip-blue: #003366;
-            --unip-dark: #002244;
+        :root { 
+            --unip-blue: #003366; 
             --unip-gold: #f5b915;
+            --unip-gold-soft: rgba(245, 185, 21, 0.15);
         }
 
-        * { box-sizing: border-box; }
-
-        body {
-            background: linear-gradient(135deg, #002244 0%, #003366 60%, #004488 100%);
-            min-height: 100vh;
-            min-height: 100dvh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
-            padding: 20px 16px;
+        body { 
+            background: radial-gradient(circle at top right, #003366, #001a33);
+            min-height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            padding: 40px 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
-        /* Fundo com padrão sutil */
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background-image: radial-gradient(circle at 20% 80%, rgba(245,185,21,0.06) 0%, transparent 50%),
-                              radial-gradient(circle at 80% 20%, rgba(255,255,255,0.04) 0%, transparent 50%);
-            pointer-events: none;
-        }
+        .logo-container { text-align: center; margin-bottom: 30px; }
+        .logo-unip-negativa { max-width: 200px; }
 
-        .login-wrapper {
-            width: 100%;
-            max-width: 420px;
-        }
-
-        /* LOGO */
-        .logo-container {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-        .logo-unip { max-width: 160px; height: auto; }
-        .logo-tagline {
-            color: rgba(255,255,255,0.5);
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-top: 8px;
-        }
-
-        /* CARD */
-        .card-login {
+        .card-login { 
+            border: none; 
+            border-radius: 16px; 
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
             background: #ffffff;
-            border-radius: 20px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
-            overflow: hidden;
         }
 
-        .card-top-bar {
-            height: 4px;
-            background: linear-gradient(90deg, var(--unip-blue), var(--unip-gold));
-        }
-
-        .card-body-inner {
-            padding: 32px 32px 28px;
-        }
-
-        /* SECTION TITLE */
-        .section-title {
-            border-left: 4px solid var(--unip-gold);
-            padding-left: 10px;
-            margin-bottom: 20px;
-            font-weight: 800;
-            color: var(--unip-blue);
-            font-size: 0.7rem;
+        .section-title { 
+            border-left: 5px solid var(--unip-gold); 
+            padding-left: 12px; 
+            margin: 10px 0 20px 0;
+            font-weight: 800; 
+            color: var(--unip-blue); 
+            font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
-        /* INPUTS */
-        .field-label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: #64748b;
-            margin-bottom: 6px;
-            display: block;
+        .btn-unip { 
+            background-color: var(--unip-blue); color: white; border: none; 
+            font-weight: bold; transition: 0.3s; text-transform: uppercase;
+            padding: 12px;
         }
+        .btn-unip:hover { background-color: #004c99; transform: translateY(-1px); color: white; }
 
-        .input-wrap {
-            position: relative;
-            margin-bottom: 16px;
-        }
-        .input-icon {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 0.9rem;
-            pointer-events: none;
-        }
-        .form-input {
-            width: 100%;
+        .form-control {
+            border-radius: 8px;
+            padding: 12px;
             border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 13px 14px 13px 40px;
-            font-size: 0.9rem;
-            font-family: 'DM Sans', sans-serif;
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            -webkit-appearance: none;
-            appearance: none;
-            background: white;
         }
-        .form-input:focus {
+        
+        .form-control:focus {
             border-color: var(--unip-blue);
-            box-shadow: 0 0 0 3px rgba(0,51,102,0.1);
+            box-shadow: none;
         }
 
-        /* TOGGLE SENHA */
-        .toggle-senha {
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: #94a3b8;
-            cursor: pointer;
-            padding: 4px;
-            font-size: 0.9rem;
-            line-height: 1;
-        }
-        .toggle-senha:hover { color: var(--unip-blue); }
-
-        /* BOTÃO */
-        .btn-login {
-            width: 100%;
-            background: var(--unip-blue);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 14px;
-            font-size: 0.9rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-family: 'DM Sans', sans-serif;
-            cursor: pointer;
-            transition: background 0.2s, transform 0.15s;
-            margin-top: 4px;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .btn-login:hover { background: var(--unip-dark); }
-        .btn-login:active { transform: scale(0.98); }
-
-        /* LINKS */
-        .link-footer {
-            text-align: center;
-            margin-top: 16px;
-        }
-        .link-esqueci {
-            color: #64748b;
-            font-size: 0.8rem;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .link-esqueci:hover { color: var(--unip-blue); }
-
-        .divider {
-            border-top: 1px solid #f1f5f9;
-            margin: 16px 0;
-        }
-
-        .cadastro-wrap {
-            text-align: center;
-        }
-        .cadastro-wrap span {
-            font-size: 0.8rem;
-            color: #94a3b8;
-        }
         .link-cadastro {
             color: var(--unip-blue);
-            font-weight: 800;
-            font-size: 0.85rem;
             text-decoration: none;
+            font-weight: bold;
+            font-size: 0.9rem;
         }
         .link-cadastro:hover { text-decoration: underline; }
-
-        /* ALERTS */
-        .alert-custom {
-            border-radius: 10px;
-            border: none;
-            font-size: 0.82rem;
-            padding: 10px 14px;
-            margin-bottom: 18px;
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-        }
-        .alert-danger-custom { background: #fef2f2; color: #991b1b; }
-        .alert-warning-custom { background: #fffbeb; color: #92400e; }
-
-        /* FOOTER */
-        .login-footer {
-            text-align: center;
-            margin-top: 20px;
-            color: rgba(255,255,255,0.3);
-            font-size: 0.72rem;
-        }
-
-        /* MOBILE */
-        @media (max-width: 480px) {
-            body { padding: 16px 12px; align-items: flex-start; padding-top: 32px; }
-            .card-body-inner { padding: 24px 20px 20px; }
-            .logo-unip { max-width: 130px; }
-            .logo-container { margin-bottom: 20px; }
-        }
     </style>
 </head>
 <body>
-    <div class="login-wrapper">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-5 col-xl-4">
+                
+                <div class="logo-container">
+                    <img src="https://www.unip.br/assets/img/logo/logo-unip.svg" alt="UNIP" class="logo-unip-negativa">
+                    <p class="text-white-50 small mt-2 text-uppercase tracking-widest">Portal de Acesso Lab Manager</p>
+                </div>
 
-        <div class="logo-container">
-            <img src="https://www.unip.br/assets/img/logo/logo-unip.svg" alt="UNIP" class="logo-unip">
-            <div class="logo-tagline">Portal de Acesso — Lab Manager</div>
-        </div>
+                <div class="card card-login">
+                    <div class="card-body p-4 p-md-5">
+                        
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                          {% if messages %}
+                            {% for category, message in messages %}
+                              <div class="alert alert-{{ 'danger' if category == 'error' else category }} small py-2 mb-4">
+                                {% if category == 'success' %}<i class="bi bi-check-circle-fill text-success me-2"></i>{% elif category in ['danger','error'] %}<i class="bi bi-x-circle-fill text-danger me-2"></i>{% elif category == 'warning' %}<i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>{% else %}<i class="bi bi-info-circle-fill text-info me-2"></i>{% endif %} {{ message }}
+                              </div>
+                            {% endfor %}
+                          {% endif %}
+                        {% endwith %}
 
-        <div class="card-login">
-            <div class="card-top-bar"></div>
-            <div class="card-body-inner">
+                        <form action="/login" method="POST">
+                            <div class="section-title">Identificação Acadêmica</div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">RA ou Login Funcional</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-person-fill text-muted"></i></span>
+                                    <input type="text" name="usuario" class="form-control border-start-0" placeholder="Ex: 2212345" required>
+                                </div>
+                            </div>
 
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                  {% if messages %}
-                    {% for category, message in messages %}
-                      <div class="alert-custom {{ 'alert-warning-custom' if 'tentativa' in message|lower or 'bloqueado' in message|lower else 'alert-danger-custom' }}">
-                        <i class="bi {{ 'bi-clock-history' if 'bloqueado' in message|lower or 'minuto' in message|lower else 'bi-exclamation-triangle-fill' }}"></i>
-                        <span>{{ message }}</span>
-                      </div>
-                    {% endfor %}
-                  {% endif %}
-                {% endwith %}
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold text-muted">Senha de Acesso</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-lock-fill text-muted"></i></span>
+                                    <input type="password" name="senha" class="form-control border-start-0" placeholder="••••••••" required>
+                                </div>
+                            </div>
 
-                <form action="/login" method="POST" autocomplete="on">
-                    <div class="section-title">Identificação Acadêmica</div>
+                            <button type="submit" class="btn btn-unip w-100 shadow-sm mb-3">Acessar Sistema</button>
 
-                    <div>
-                        <label class="field-label" for="usuario">RA ou Login Funcional</label>
-                        <div class="input-wrap">
-                            <i class="bi bi-person-fill input-icon"></i>
-                            <input type="text" name="usuario" id="usuario"
-                                   class="form-input"
-                                   placeholder="Ex: 2212345"
-                                   autocomplete="username"
-                                   inputmode="text"
-                                   required>
-                        </div>
+                            <div class="text-center mb-2">
+                                <a href="/esqueci_senha" class="small text-muted" style="text-decoration:none;">
+                                    <i class="bi bi-key me-1"></i>Esqueci minha senha
+                                </a>
+                            </div>
+                            
+                            <div class="text-center border-top pt-3">
+                                <span class="small text-muted">Ainda não tem acesso?</span><br>
+                                <a href="/cadastro" class="link-cadastro">Criar cadastro</a>
+                            </div>
+                        </form>
+
                     </div>
+                </div>
 
-                    <div>
-                        <label class="field-label" for="senha">Senha de Acesso</label>
-                        <div class="input-wrap">
-                            <i class="bi bi-lock-fill input-icon"></i>
-                            <input type="password" name="senha" id="senha"
-                                   class="form-input"
-                                   placeholder="••••••••"
-                                   autocomplete="current-password"
-                                   required>
-                            <button type="button" class="toggle-senha" onclick="toggleSenha()" tabindex="-1" id="toggleBtn">
-                                <i class="bi bi-eye" id="toggleIcon"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn-login">
-                        <i class="bi bi-box-arrow-in-right me-2"></i>Acessar Sistema
-                    </button>
-
-                    <div class="link-footer">
-                        <a href="/esqueci_senha" class="link-esqueci">
-                            <i class="bi bi-key"></i> Esqueci minha senha
-                        </a>
-                    </div>
-
-                    <div class="divider"></div>
-
-                    <div class="cadastro-wrap">
-                        <span>Ainda não tem acesso? </span>
-                        <a href="/cadastro" class="link-cadastro">Criar cadastro</a>
-                    </div>
-                </form>
+                <div class="text-center mt-4 text-white-50 small">
+                    &copy; 2026 UNIP - Todos os direitos reservados
+                </div>
 
             </div>
         </div>
-
-        <div class="login-footer">&copy; 2026 UNIP — Todos os direitos reservados</div>
-
     </div>
-
-    <script>
-    function toggleSenha() {
-        const input = document.getElementById('senha');
-        const icon = document.getElementById('toggleIcon');
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.className = 'bi bi-eye-slash';
-        } else {
-            input.type = 'password';
-            icon.className = 'bi bi-eye';
-        }
-    }
-    </script>
 </body>
 </html>
