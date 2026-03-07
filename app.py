@@ -732,28 +732,20 @@ def admin_usuarios():
         usuarios = Usuario.query.filter(Usuario.role != 'super_admin').all()
     turmas = Turma.query.filter_by(status='ativa').order_by(Turma.nome).all()
     # Conta reservas por usuario para exibir aviso no modal de exclusao
-    # Conta apenas reservas FUTURAS por usuario_id
+    # Conta reservas FUTURAS por usuario - filtra em Python por suportar DD/MM/YYYY e YYYY-MM-DD
     from datetime import date as _date
-    hoje_str = _date.today().strftime('%Y-%m-%d')
-    reservas_por_usuario_id = {
-        r.usuario_id: r.count
-        for r in db.session.query(ReservaLab.usuario_id, db.func.count(ReservaLab.id).label("count"))
-                           .filter(ReservaLab.usuario_id.isnot(None), ReservaLab.data >= hoje_str)
-                           .group_by(ReservaLab.usuario_id).all()
-    }
-    # Conta reservas FUTURAS por turma_id
-    reservas_por_turma = {
-        r.turma_id: r.count
-        for r in db.session.query(ReservaLab.turma_id, db.func.count(ReservaLab.id).label("count"))
-                           .filter(ReservaLab.turma_id.isnot(None), ReservaLab.data >= hoje_str)
-                           .group_by(ReservaLab.turma_id).all()
-    }
-    # Monta dict final: para cada usuario, soma reservas por usuario_id e por turma_id
+    def _parse_data(d):
+        try:
+            if '-' in d: return _date.fromisoformat(d)
+            return _date(int(d[6:10]), int(d[3:5]), int(d[0:2]))
+        except: return _date(2000, 1, 1)
+    hoje_d = _date.today()
+    todas_reservas_futuras = [r for r in ReservaLab.query.all() if _parse_data(r.data) >= hoje_d]
     reservas_por_usuario = {}
     for u in usuarios:
-        total = reservas_por_usuario_id.get(u.id, 0)
+        total = sum(1 for r in todas_reservas_futuras if r.usuario_id == u.id)
         if u.turma_id:
-            total += reservas_por_turma.get(u.turma_id, 0)
+            total += sum(1 for r in todas_reservas_futuras if r.turma_id == u.turma_id and r.usuario_id != u.id)
         reservas_por_usuario[u.id] = total
     return render_template("admin_usuarios.html", usuarios=usuarios, usuario_logado=usuario, turmas=turmas, reservas_por_usuario=reservas_por_usuario)
 
