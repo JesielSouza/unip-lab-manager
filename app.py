@@ -732,11 +732,27 @@ def admin_usuarios():
         usuarios = Usuario.query.filter(Usuario.role != 'super_admin').all()
     turmas = Turma.query.filter_by(status='ativa').order_by(Turma.nome).all()
     # Conta reservas por usuario para exibir aviso no modal de exclusao
-    reservas_por_usuario = {
+    # Conta reservas por usuario_id direto
+    reservas_por_usuario_id = {
         r.usuario_id: r.count
         for r in db.session.query(ReservaLab.usuario_id, db.func.count(ReservaLab.id).label("count"))
+                           .filter(ReservaLab.usuario_id.isnot(None))
                            .group_by(ReservaLab.usuario_id).all()
     }
+    # Conta reservas por turma_id (para usuarios cujas reservas nao tem usuario_id)
+    reservas_por_turma = {
+        r.turma_id: r.count
+        for r in db.session.query(ReservaLab.turma_id, db.func.count(ReservaLab.id).label("count"))
+                           .filter(ReservaLab.turma_id.isnot(None))
+                           .group_by(ReservaLab.turma_id).all()
+    }
+    # Monta dict final: para cada usuario, soma reservas por usuario_id e por turma_id
+    reservas_por_usuario = {}
+    for u in usuarios:
+        total = reservas_por_usuario_id.get(u.id, 0)
+        if u.turma_id:
+            total += reservas_por_turma.get(u.turma_id, 0)
+        reservas_por_usuario[u.id] = total
     return render_template("admin_usuarios.html", usuarios=usuarios, usuario_logado=usuario, turmas=turmas, reservas_por_usuario=reservas_por_usuario)
 
 @app.route("/admin/criar_usuario", methods=["POST"])
@@ -1292,10 +1308,13 @@ def painel_unip():
     if usuario_logado.role == 'aluno':
         # OTIMIZAÇÃO: Filtramos direto no banco usando o ID da turma do aluno
         # Só trazemos o que ele realmente precisa ver (Aprovadas da Turma dele)
-        reservas_turma = ReservaLab.query.filter_by(
-            turma_id=usuario_logado.turma_id, 
-            status='approved'
-        ).order_by(ReservaLab.data.desc()).all()
+        from datetime import date
+        hoje = date.today().strftime('%Y-%m-%d')
+        reservas_turma = ReservaLab.query.filter(
+            ReservaLab.turma_id == usuario_logado.turma_id,
+            ReservaLab.status == 'approved',
+            ReservaLab.data >= hoje
+        ).order_by(ReservaLab.data.asc()).all()
         
         return render_template("painel_aluno.html", 
                                usuario=usuario_logado, # Enviamos o objeto todo para o template
