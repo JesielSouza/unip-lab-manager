@@ -731,7 +731,13 @@ def admin_usuarios():
     else:
         usuarios = Usuario.query.filter(Usuario.role != 'super_admin').all()
     turmas = Turma.query.filter_by(status='ativa').order_by(Turma.nome).all()
-    return render_template("admin_usuarios.html", usuarios=usuarios, usuario_logado=usuario, turmas=turmas)
+    # Conta reservas por usuario para exibir aviso no modal de exclusao
+    reservas_por_usuario = {
+        r.usuario_id: r.count
+        for r in db.session.query(ReservaLab.usuario_id, db.func.count(ReservaLab.id).label("count"))
+                           .group_by(ReservaLab.usuario_id).all()
+    }
+    return render_template("admin_usuarios.html", usuarios=usuarios, usuario_logado=usuario, turmas=turmas, reservas_por_usuario=reservas_por_usuario)
 
 @app.route("/admin/criar_usuario", methods=["POST"])
 def criar_usuario():
@@ -842,7 +848,7 @@ def editar_usuario(id):
 
     return redirect(url_for("admin_usuarios"))
 
-@app.route("/admin/excluir_usuario/<int:id>", methods=["POST"])
+@app.route("/admin/excluir_usuario/<int:id>")
 def excluir_usuario(id):
     if "usuario" not in session:
         return redirect("/login")
