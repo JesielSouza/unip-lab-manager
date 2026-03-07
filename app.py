@@ -732,18 +732,20 @@ def admin_usuarios():
         usuarios = Usuario.query.filter(Usuario.role != 'super_admin').all()
     turmas = Turma.query.filter_by(status='ativa').order_by(Turma.nome).all()
     # Conta reservas por usuario para exibir aviso no modal de exclusao
-    # Conta reservas por usuario_id direto
+    # Conta apenas reservas FUTURAS por usuario_id
+    from datetime import date as _date
+    hoje_str = _date.today().strftime('%Y-%m-%d')
     reservas_por_usuario_id = {
         r.usuario_id: r.count
         for r in db.session.query(ReservaLab.usuario_id, db.func.count(ReservaLab.id).label("count"))
-                           .filter(ReservaLab.usuario_id.isnot(None))
+                           .filter(ReservaLab.usuario_id.isnot(None), ReservaLab.data >= hoje_str)
                            .group_by(ReservaLab.usuario_id).all()
     }
-    # Conta reservas por turma_id (para usuarios cujas reservas nao tem usuario_id)
+    # Conta reservas FUTURAS por turma_id
     reservas_por_turma = {
         r.turma_id: r.count
         for r in db.session.query(ReservaLab.turma_id, db.func.count(ReservaLab.id).label("count"))
-                           .filter(ReservaLab.turma_id.isnot(None))
+                           .filter(ReservaLab.turma_id.isnot(None), ReservaLab.data >= hoje_str)
                            .group_by(ReservaLab.turma_id).all()
     }
     # Monta dict final: para cada usuario, soma reservas por usuario_id e por turma_id
@@ -1309,12 +1311,21 @@ def painel_unip():
         # OTIMIZAÇÃO: Filtramos direto no banco usando o ID da turma do aluno
         # Só trazemos o que ele realmente precisa ver (Aprovadas da Turma dele)
         from datetime import date
-        hoje = date.today().strftime('%Y-%m-%d')
-        reservas_turma = ReservaLab.query.filter(
-            ReservaLab.turma_id == usuario_logado.turma_id,
-            ReservaLab.status == 'approved',
-            ReservaLab.data >= hoje
-        ).order_by(ReservaLab.data.asc()).all()
+        hoje = date.today()
+        # Busca aprovadas da turma e filtra por data futura em Python (campo data pode ser DD/MM/YYYY ou YYYY-MM-DD)
+        reservas_todas_turma = ReservaLab.query.filter_by(
+            turma_id=usuario_logado.turma_id,
+            status='approved'
+        ).all()
+        def parse_data(d):
+            try:
+                if '-' in d: return date.fromisoformat(d)
+                return date(int(d[6:10]), int(d[3:5]), int(d[0:2]))
+            except: return date(2000,1,1)
+        reservas_turma = sorted(
+            [r for r in reservas_todas_turma if parse_data(r.data) >= hoje],
+            key=lambda r: parse_data(r.data)
+        )
         
         return render_template("painel_aluno.html", 
                                usuario=usuario_logado, # Enviamos o objeto todo para o template
