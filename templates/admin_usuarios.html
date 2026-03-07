@@ -292,7 +292,7 @@
               {% if u.role not in ['admin', 'super_admin'] or (usuario_logado.role == 'super_admin' and u.role == 'admin') %}
               <a href="/admin/editar_usuario/{{ u.id }}" class="btn-edit me-1"><i class="bi bi-pencil"></i> Editar</a>
               {% if u.role != 'super_admin' %}
-              <a href="/admin/excluir_usuario/{{ u.id }}" class="btn-del" onclick="return confirm('Excluir {{ u.nome }}?')"><i class="bi bi-trash"></i></a>
+              <button class="btn-del" onclick="confirmarExclusao({{ u.id }}, '{{ u.nome }}', {{ u.reservas|length if u.reservas is defined else 0 }})"><i class="bi bi-trash"></i></button>
               {% endif %}
               {% endif %}
             </td>
@@ -536,5 +536,58 @@ function toggleModalAluno() {
   document.getElementById('modal_campos_aluno').style.display = role === 'aluno' ? 'block' : 'none';
 }
 </script>
+
+<!-- ── MODAL CONFIRMAÇÃO EXCLUSÃO ──────────────────────────── -->
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+      <div class="modal-header border-0" style="background:#fff1f2;padding:1.2rem 1.5rem 0.5rem;">
+        <div class="d-flex align-items-center gap-2">
+          <div style="background:#fee2e2;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;">
+            <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+          </div>
+          <h5 class="modal-title fw-bold text-danger mb-0">Excluir usuário</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 py-3">
+        <p class="mb-1">Você está prestes a excluir:</p>
+        <p class="fw-bold fs-6 mb-2" id="modalNomeUsuario"></p>
+        <div id="modalAvisoReservas" class="alert alert-warning border-0 rounded-3 py-2 px-3 small mb-2" style="display:none;">
+          <i class="bi bi-calendar-x me-1"></i>
+          <span id="modalTextoReservas"></span>
+        </div>
+        <p class="text-muted small mb-0">Esta ação é <strong>irreversível</strong>. Todas as reservas associadas também serão removidas.</p>
+      </div>
+      <div class="modal-footer border-0 px-4 pb-4 pt-1 gap-2">
+        <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Cancelar</button>
+        <form id="formExcluir" method="POST" action="" class="d-inline">
+          <button type="submit" class="btn btn-danger fw-bold px-4">
+            <i class="bi bi-trash me-1"></i> Excluir
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function confirmarExclusao(id, nome, totalReservas) {
+    document.getElementById('modalNomeUsuario').textContent = nome;
+    document.getElementById('formExcluir').action = '/admin/excluir_usuario/' + id;
+    
+    const avisoReservas = document.getElementById('modalAvisoReservas');
+    const textoReservas = document.getElementById('modalTextoReservas');
+    if (totalReservas > 0) {
+        textoReservas.textContent = 'Este usuário possui ' + totalReservas + ' reserva(s) que também serão excluídas.';
+        avisoReservas.style.display = 'block';
+    } else {
+        avisoReservas.style.display = 'none';
+    }
+    
+    new bootstrap.Modal(document.getElementById('modalExcluir')).show();
+}
+</script>
+
 </body>
 </html>
