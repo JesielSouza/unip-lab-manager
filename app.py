@@ -848,7 +848,7 @@ def editar_usuario(id):
 
     return redirect(url_for("admin_usuarios"))
 
-@app.route("/admin/excluir_usuario/<int:id>")
+@app.route("/admin/excluir_usuario/<int:id>", methods=["POST"])
 def excluir_usuario(id):
     if "usuario" not in session:
         return redirect("/login")
