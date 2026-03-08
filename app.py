@@ -1468,6 +1468,13 @@ def logout():
 
 
 # -- ERROR HANDLERS --
+@app.errorhandler(400)
+def erro_400(e):
+    return render_template('erro.html', codigo=400,
+        titulo='Requisicao Invalida',
+        mensagem='Token de seguranca invalido ou expirado. Recarregue a pagina e tente novamente.',
+        icone='bi-shield-exclamation'), 400
+
 @app.errorhandler(403)
 def erro_403(e):
     return render_template('erro.html', codigo=403,
