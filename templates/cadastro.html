@@ -132,6 +132,7 @@
                           {% endif %}
                         {% endwith %}
                         <form id="formCadastro" action="/cadastro" method="POST" onsubmit="return validarSenhas()">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="mb-4">
                                 <div class="btn-group w-100 shadow-sm" role="group">
                                     <input type="radio" class="btn-check" name="role" id="aluno" value="aluno" checked onchange="ajustarCampos()">

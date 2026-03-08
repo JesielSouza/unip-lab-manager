@@ -90,6 +90,7 @@
                         </p>
 
                         <form action="/esqueci_senha" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="mb-4">
                                 <label class="form-label small fw-bold text-muted">Email Cadastrado</label>
                                 <div class="input-group">

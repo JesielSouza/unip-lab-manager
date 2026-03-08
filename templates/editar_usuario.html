@@ -79,6 +79,7 @@
       {% endwith %}
       <div class="edit-card">
         <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
           <div class="section-label mb-3">Dados de Acesso</div>
           <div class="row g-3 mb-4">

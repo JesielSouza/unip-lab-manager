@@ -96,6 +96,7 @@
           </div>
         </div>
         <form method="post" action="{{ url_for('admin_perfil') }}" class="form-section">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
             <label class="form-label">Login</label>
             <input type="text" class="form-control" name="login" value="{{ usuario.login }}" required>

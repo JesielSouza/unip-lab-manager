@@ -163,6 +163,7 @@
                 <div class="card-body p-4 p-lg-5">
                     
                     <form id="formReserva" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="row g-4">
                             
                             <div class="col-12">

@@ -400,6 +400,7 @@
 <div class="modal fade" id="modalNovoLab" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content shadow border-0" action="/admin/criar_laboratorio" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="modal-header bg-light">
         <h5 class="modal-title fw-bold"><i class="bi bi-building me-2"></i>Novo Laboratório</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -425,6 +426,7 @@
 <div class="modal fade" id="modalEditLab" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content shadow border-0" id="formEditLab" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="modal-header bg-light">
         <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Editar Laboratório</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -461,6 +463,7 @@
 <div class="modal fade" id="modalEditTurma" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content shadow border-0" id="formEditTurma" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="modal-header bg-light">
         <h5 class="modal-title fw-bold" id="editTurmaTitle"><i class="bi bi-people me-2"></i>Editar Turma</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

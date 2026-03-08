@@ -329,6 +329,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form action="/admin/criar_usuario" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body px-4">
           <div class="mb-3">
             <label class="form-label">Nome Completo</label>
@@ -562,6 +563,7 @@ function toggleModalAluno() {
       <div class="modal-footer border-0 px-4 pb-4 pt-1 gap-2">
         <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Cancelar</button>
         <form id="formExcluir" method="POST" action="" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-danger fw-bold px-4">
             <i class="bi bi-trash me-1"></i> Excluir
           </button>
