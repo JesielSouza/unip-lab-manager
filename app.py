@@ -1463,6 +1463,38 @@ def logout():
     session.clear()
     return redirect("/login")
 
+
+
+# -- ERROR HANDLERS --
+@app.errorhandler(403)
+def erro_403(e):
+    return render_template('erro.html', codigo=403,
+        titulo='Acesso Negado',
+        mensagem='Voce nao tem permissao para acessar esta pagina.',
+        icone='bi-shield-lock-fill'), 403
+
+@app.errorhandler(404)
+def erro_404(e):
+    return render_template('erro.html', codigo=404,
+        titulo='Pagina Nao Encontrada',
+        mensagem='A pagina que voce esta procurando nao existe ou foi movida.',
+        icone='bi-compass'), 404
+
+@app.errorhandler(500)
+def erro_500(e):
+    db.session.rollback()
+    return render_template('erro.html', codigo=500,
+        titulo='Erro Interno',
+        mensagem='Algo deu errado no servidor. Tente novamente em instantes.',
+        icone='bi-exclamation-triangle-fill'), 500
+
+@app.errorhandler(405)
+def erro_405(e):
+    return render_template('erro.html', codigo=405,
+        titulo='Metodo nao permitido',
+        mensagem='Esta acao nao pode ser realizada desta forma.',
+        icone='bi-slash-circle'), 405
+
 # Inicializa o banco ao subir com gunicorn ou diretamente
 with app.app_context():
     db.create_all()
