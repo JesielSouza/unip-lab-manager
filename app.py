@@ -13,9 +13,11 @@ from email.mime.multipart import MIMEMultipart
 import threading
 import time
 from collections import defaultdict
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-troque-em-producao")
+csrf = CSRFProtect(app)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
