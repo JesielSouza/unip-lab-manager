@@ -1330,9 +1330,24 @@ def painel_unip():
                                bloqueios=bloqueios)
     
     # --- VISÃO GESTÃO (Prof/Coord/Admin) ---
-    # Para gestão, pegamos todas as reservas para auditoria
-    reservas_todas = ReservaLab.query.order_by(ReservaLab.data.desc()).all()
-    
+    from datetime import date
+    hoje_str = date.today().strftime('%d/%m/%Y')
+
+    # Reservas ativas (hoje ou futuras) — sem paginação, geralmente poucas
+    reservas_ativas = [r for r in ReservaLab.query.order_by(ReservaLab.data.asc()).all()
+                       if r.data >= hoje_str]
+
+    # Histórico paginado — 10 por página
+    historico_page = request.args.get('hpage', 1, type=int)
+    PER_PAGE = 10
+    todas_vencidas = [r for r in ReservaLab.query.order_by(ReservaLab.data.desc()).all()
+                      if r.data < hoje_str]
+    total_vencidas = len(todas_vencidas)
+    total_pages = max(1, (total_vencidas + PER_PAGE - 1) // PER_PAGE)
+    historico_page = max(1, min(historico_page, total_pages))
+    offset = (historico_page - 1) * PER_PAGE
+    reservas_vencidas = todas_vencidas[offset: offset + PER_PAGE]
+
     usuarios, todos_labs, todas_turmas = [], [], []
     if is_admin(usuario_logado):
         usuarios = Usuario.query.all()
@@ -1346,7 +1361,11 @@ def painel_unip():
                            usuario_id=usuario_logado.id, 
                            role=role_display,
                            is_super_admin=is_super_admin(usuario_logado),
-                           reservas=reservas_todas,
+                           reservas=reservas_ativas,
+                           reservas_vencidas=reservas_vencidas,
+                           historico_page=historico_page,
+                           historico_total_pages=total_pages,
+                           historico_total=total_vencidas,
                            usuarios=usuarios,
                            laboratorios=todos_labs,
                            turmas=todas_turmas,
