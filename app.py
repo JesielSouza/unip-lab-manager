@@ -1140,38 +1140,76 @@ def excluir_bloqueio(id):
 def coordenador_reservas():
     if "usuario" not in session:
         return redirect("/login")
-    
+
     usuario = Usuario.query.filter_by(login=session["usuario"]).first()
     if not usuario or usuario.role not in ['coordenador', 'admin', 'super_admin']:
         return "Acesso negado", 403
 
-    # Admin/super_admin vê tudo, Coordenador só vê reservas das suas turmas
+    # Filtros do histórico
+    filtro_lab    = request.args.get('lab', '').strip()
+    filtro_status = request.args.get('status', '').strip()
+    filtro_de     = request.args.get('de', '').strip()
+    filtro_ate    = request.args.get('ate', '').strip()
+    hist_page     = request.args.get('hpage', 1, type=int)
+    PER_PAGE      = 20
+
+    # Base de pendentes e histórico
     if is_admin(usuario):
-        reservas_pendentes = ReservaLab.query.filter(
+        q_pendentes = ReservaLab.query.filter(
             or_(ReservaLab.status == 'pending', ReservaLab.status == 'pre_approved')
-        ).order_by(ReservaLab.data.asc()).all()
-
-        todas_reservas = ReservaLab.query.filter(
-            or_(ReservaLab.status == 'approved', ReservaLab.status == 'rejected')
-        ).order_by(ReservaLab.data.desc()).limit(50).all()
+        )
+        q_hist = ReservaLab.query
     else:
-        # Busca IDs das turmas onde este coordenador é responsável
         turmas_do_coord = [t.id for t in Turma.query.filter_by(coordenador_id=usuario.id).all()]
-
-        reservas_pendentes = ReservaLab.query.filter(
+        q_pendentes = ReservaLab.query.filter(
             or_(ReservaLab.status == 'pending', ReservaLab.status == 'pre_approved'),
             ReservaLab.turma_id.in_(turmas_do_coord)
-        ).order_by(ReservaLab.data.asc()).all()
+        )
+        q_hist = ReservaLab.query.filter(ReservaLab.turma_id.in_(turmas_do_coord))
 
-        todas_reservas = ReservaLab.query.filter(
-            or_(ReservaLab.status == 'approved', ReservaLab.status == 'rejected'),
-            ReservaLab.turma_id.in_(turmas_do_coord)
-        ).order_by(ReservaLab.data.desc()).limit(50).all()
+    reservas_pendentes = q_pendentes.order_by(ReservaLab.data.asc()).all()
 
-    return render_template("coordenador_reservas.html", 
-                           reservas_pendentes=reservas_pendentes, 
+    # Aplica filtros ao histórico
+    if filtro_lab:
+        lab_obj = Laboratorio.query.filter_by(nome=filtro_lab).first()
+        if lab_obj:
+            q_hist = q_hist.filter(ReservaLab.laboratorio_id == lab_obj.id)
+        else:
+            q_hist = q_hist.filter(db.false())
+    if filtro_status:
+        q_hist = q_hist.filter(ReservaLab.status == filtro_status)
+    if filtro_de:
+        try:
+            from datetime import datetime as _dt
+            de_iso = _dt.strptime(filtro_de, '%Y-%m-%d').strftime('%d/%m/%Y')
+            q_hist = q_hist.filter(ReservaLab.data >= de_iso)
+        except: pass
+    if filtro_ate:
+        try:
+            from datetime import datetime as _dt
+            ate_iso = _dt.strptime(filtro_ate, '%Y-%m-%d').strftime('%d/%m/%Y')
+            q_hist = q_hist.filter(ReservaLab.data <= ate_iso)
+        except: pass
+
+    hist_total     = q_hist.count()
+    hist_pages     = max(1, (hist_total + PER_PAGE - 1) // PER_PAGE)
+    hist_page      = max(1, min(hist_page, hist_pages))
+    todas_reservas = q_hist.order_by(ReservaLab.data.desc()).offset((hist_page - 1) * PER_PAGE).limit(PER_PAGE).all()
+
+    labs = Laboratorio.query.order_by(Laboratorio.nome).all()
+
+    return render_template("coordenador_reservas.html",
+                           reservas_pendentes=reservas_pendentes,
                            todas_reservas=todas_reservas,
-                           usuario_logado=usuario)
+                           usuario_logado=usuario,
+                           labs=labs,
+                           filtro_lab=filtro_lab,
+                           filtro_status=filtro_status,
+                           filtro_de=filtro_de,
+                           filtro_ate=filtro_ate,
+                           hist_page=hist_page,
+                           hist_pages=hist_pages,
+                           hist_total=hist_total)
 
 # ROTA DE APROVAÇÃO (CORRIGIDA PARA ADMIN FINALIZAR COORDENADOR)
 @app.route("/aprovar_reserva/<int:id>", methods=["POST"])
