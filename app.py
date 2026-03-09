@@ -105,8 +105,11 @@ def inicializar_unidade():
     
     nomes_oficiais = [l["nome"] for l in labs_predefinidos]
 
-    # Limpa nomes que não deveriam estar lá (duplicatas)
-    Laboratorio.query.filter(~Laboratorio.nome.in_(nomes_oficiais)).delete(synchronize_session=False)
+    # Limpa labs não oficiais: primeiro remove bloqueios associados, depois o lab
+    labs_para_remover = Laboratorio.query.filter(~Laboratorio.nome.in_(nomes_oficiais)).all()
+    for lab in labs_para_remover:
+        BloqueioLab.query.filter_by(laboratorio_id=lab.id).delete(synchronize_session=False)
+        db.session.delete(lab)
 
     for lab_data in labs_predefinidos:
         lab = Laboratorio.query.filter_by(nome=lab_data["nome"]).first()
