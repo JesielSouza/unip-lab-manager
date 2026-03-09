@@ -183,85 +183,79 @@
     {% endfor %}{% endif %}
   {% endwith %}
 
-  {# ── CONTADORES POR ROLE ── #}
-  {% set admins = usuarios|selectattr('role','in',['admin','super_admin'])|list %}
-  {% set coords = usuarios|selectattr('role','equalto','coordenador')|list %}
-  {% set profs  = usuarios|selectattr('role','equalto','professor')|list %}
-  {% set alunos = usuarios|selectattr('role','equalto','aluno')|list %}
-
+  {# ── CARDS DE FILTRO POR ROLE ── #}
   <div class="row g-3 mb-4">
     <div class="col-6 col-md-2">
-      <div class="stat-card stat-total" onclick="filtrarRole('todos')" id="stat-todos">
+      <a href="?q={{ busca }}&role=" class="stat-card stat-total text-decoration-none {% if not filtro_role %}active{% endif %}" id="stat-todos">
         <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
         <div>
-          <div class="stat-num">{{ usuarios|length }}</div>
+          <div class="stat-num">{{ count_total }}</div>
           <div class="stat-label">Total</div>
         </div>
-      </div>
+      </a>
     </div>
     <div class="col-6 col-md-2">
-      <div class="stat-card stat-admin" onclick="filtrarRole('admin')" id="stat-admin">
+      <a href="?q={{ busca }}&role=admin" class="stat-card stat-admin text-decoration-none {% if filtro_role == 'admin' %}active{% endif %}">
         <div class="stat-icon"><i class="bi bi-shield-fill"></i></div>
         <div>
-          <div class="stat-num">{{ admins|length }}</div>
+          <div class="stat-num">{{ count_admin }}</div>
           <div class="stat-label">Admins</div>
         </div>
-      </div>
+      </a>
     </div>
     <div class="col-6 col-md-3">
-      <div class="stat-card stat-coord" onclick="filtrarRole('coordenador')" id="stat-coordenador">
+      <a href="?q={{ busca }}&role=coordenador" class="stat-card stat-coord text-decoration-none {% if filtro_role == 'coordenador' %}active{% endif %}">
         <div class="stat-icon"><i class="bi bi-person-badge-fill"></i></div>
         <div>
-          <div class="stat-num">{{ coords|length }}</div>
+          <div class="stat-num">{{ count_coord }}</div>
           <div class="stat-label">Coordenadores</div>
         </div>
-      </div>
+      </a>
     </div>
     <div class="col-6 col-md-2">
-      <div class="stat-card stat-prof" onclick="filtrarRole('professor')" id="stat-professor">
+      <a href="?q={{ busca }}&role=professor" class="stat-card stat-prof text-decoration-none {% if filtro_role == 'professor' %}active{% endif %}">
         <div class="stat-icon"><i class="bi bi-mortarboard-fill"></i></div>
         <div>
-          <div class="stat-num">{{ profs|length }}</div>
+          <div class="stat-num">{{ count_prof }}</div>
           <div class="stat-label">Professores</div>
         </div>
-      </div>
+      </a>
     </div>
     <div class="col-6 col-md-3">
-      <div class="stat-card stat-aluno" onclick="filtrarRole('aluno')" id="stat-aluno">
+      <a href="?q={{ busca }}&role=aluno" class="stat-card stat-aluno text-decoration-none {% if filtro_role == 'aluno' %}active{% endif %}">
         <div class="stat-icon"><i class="bi bi-person-fill"></i></div>
         <div>
-          <div class="stat-num">{{ alunos|length }}</div>
+          <div class="stat-num">{{ count_aluno }}</div>
           <div class="stat-label">Alunos</div>
         </div>
-      </div>
+      </a>
     </div>
   </div>
 
   {# ── BUSCA ── #}
-  <div class="search-wrap">
+  <form method="get" class="search-wrap mb-4">
+    <input type="hidden" name="role" value="{{ filtro_role }}">
     <div class="search-input-wrap">
       <i class="bi bi-search"></i>
-      <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nome, login ou e-mail..." oninput="buscar()">
+      <input type="text" class="search-input" name="q" value="{{ busca }}"
+             placeholder="Buscar por nome, login ou e-mail..." oninput="this.form.submit()">
     </div>
-    <span id="resultCount" style="font-size:0.78rem;color:var(--muted);white-space:nowrap;"></span>
-  </div>
+    {% if busca %}
+    <span style="font-size:0.78rem;color:var(--muted);white-space:nowrap;">{{ total }} encontrado{{ 's' if total != 1 }}</span>
+    {% endif %}
+  </form>
 
-  {# ── GRUPOS ── #}
-  {% set grupos = [
-    ('Administradores', 'admin', admins, 'bi-shield-fill', '#6d28d9'),
-    ('Coordenadores', 'coordenador', coords, 'bi-person-badge-fill', '#0369a1'),
-    ('Professores', 'professor', profs, 'bi-mortarboard-fill', '#065f46'),
-    ('Alunos', 'aluno', alunos, 'bi-person-fill', '#92400e')
-  ] %}
-
-  {% for titulo, role_key, membros, icone, cor in grupos %}
-  {% if membros %}
-  <div class="table-card mb-4 group-section" id="group-{{ role_key }}" data-role="{{ role_key }}">
+  {# ── TABELA ÚNICA ── #}
+  <div class="table-card mb-4">
     <div class="table-card-header">
       <div class="group-title">
-        <i class="bi {{ icone }}" style="color:{{ cor }}"></i>
-        {{ titulo }}
-        <span class="group-count" id="count-{{ role_key }}">{{ membros|length }}</span>
+        {% if filtro_role == 'admin' %}<i class="bi bi-shield-fill" style="color:#6d28d9"></i> Administradores
+        {% elif filtro_role == 'coordenador' %}<i class="bi bi-person-badge-fill" style="color:#0369a1"></i> Coordenadores
+        {% elif filtro_role == 'professor' %}<i class="bi bi-mortarboard-fill" style="color:#065f46"></i> Professores
+        {% elif filtro_role == 'aluno' %}<i class="bi bi-person-fill" style="color:#92400e"></i> Alunos
+        {% else %}<i class="bi bi-people-fill"></i> Todos os usuários
+        {% endif %}
+        <span class="group-count">{{ total }}</span>
       </div>
     </div>
     <div class="table-responsive">
@@ -271,18 +265,14 @@
             <th>Nome</th>
             <th>Login / RA</th>
             <th>E-mail</th>
-            <th>Cargo</th>
+            <th>Perfil</th>
             <th>Turma</th>
             <th class="text-end pe-4">Ações</th>
           </tr>
         </thead>
-        <tbody id="tbody-{{ role_key }}">
-          {% for u in membros %}
-          <tr class="user-row" 
-              data-nome="{{ u.nome|lower }}" 
-              data-login="{{ u.login|lower }}" 
-              data-email="{{ u.email|lower }}"
-              data-role="{{ u.role }}">
+        <tbody>
+          {% for u in usuarios %}
+          <tr class="user-row">
             <td class="fw-bold">{{ u.nome }}</td>
             <td class="text-muted" style="font-family:'DM Mono',monospace;font-size:0.78rem">{{ u.login }}</td>
             <td class="small text-muted">{{ u.email }}</td>
@@ -297,18 +287,38 @@
               {% endif %}
             </td>
           </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-4">Nenhum usuário encontrado.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    {# Paginação por grupo #}
-    <div class="pagination-wrap" id="pag-{{ role_key }}" style="display:none">
-      <span id="pag-info-{{ role_key }}"></span>
-      <div class="pagination-btns" id="pag-btns-{{ role_key }}"></div>
+
+    {# ── PAGINAÇÃO ── #}
+    {% if total_pages > 1 %}
+    <div class="pagination-wrap">
+      <span>Mostrando {{ (page-1)*20+1 }}–{{ [page*20, total]|min }} de {{ total }}</span>
+      <div class="pagination-btns">
+        <a href="?q={{ busca }}&role={{ filtro_role }}&page={{ page-1 }}"
+           class="page-btn {% if page == 1 %}disabled{% endif %}">
+          <i class="bi bi-chevron-left"></i>
+        </a>
+        {% for p in range(1, total_pages+1) %}
+          {% if p == 1 or p == total_pages or (p >= page-2 and p <= page+2) %}
+            <a href="?q={{ busca }}&role={{ filtro_role }}&page={{ p }}"
+               class="page-btn {% if p == page %}active{% endif %}">{{ p }}</a>
+          {% elif p == page-3 or p == page+3 %}
+            <span class="page-btn disabled">…</span>
+          {% endif %}
+        {% endfor %}
+        <a href="?q={{ busca }}&role={{ filtro_role }}&page={{ page+1 }}"
+           class="page-btn {% if page == total_pages %}disabled{% endif %}">
+          <i class="bi bi-chevron-right"></i>
+        </a>
+      </div>
     </div>
+    {% endif %}
   </div>
-  {% endif %}
-  {% endfor %}
 
   <div id="emptyState" class="table-card" style="display:none">
     <div class="empty-state">
@@ -348,9 +358,10 @@
           <div class="row g-2 mb-3">
             <div class="col-md-6">
               <label class="form-label">Cargo / Role</label>
-              <select class="form-select" name="role" id="modal_role">
+              <select class="form-select" name="role" id="modal_role" onchange="toggleModalAluno()">
                 <option value="professor">Professor</option>
                 <option value="coordenador">Coordenador</option>
+                <option value="aluno">Aluno</option>
                 {% if usuario_logado.role == 'super_admin' %}
                 <option value="admin">Administrador</option>
                 {% endif %}
@@ -361,7 +372,28 @@
               <input type="password" class="form-control" name="senha" required>
             </div>
           </div>
-
+          <div id="modal_campos_aluno" style="display:none;">
+            <div class="row g-2 mb-3">
+              <div class="col-md-8">
+                <label class="form-label">Turma</label>
+                <select class="form-select" name="turma_id">
+                  <option value="">Selecione...</option>
+                  {% for t in turmas %}
+                  <option value="{{ t.id }}">{{ t.nome }} — {{ t.curso }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Semestre</label>
+                <select class="form-select" name="semestre">
+                  <option value="">—</option>
+                  {% for i in range(1, 7) %}
+                  <option value="{{ i }}º Semestre">{{ i }}º</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="modal-footer border-0 pt-0 px-4">
           <button type="button" class="btn btn-light border rounded-3" data-bs-dismiss="modal">Cancelar</button>
@@ -374,143 +406,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-const POR_PAGINA = 10;
-let filtroAtivo = 'todos';
-let paginasAtuais = {};
-
-// ── FILTRO POR ROLE ──────────────────────────────────────────────────────
-function filtrarRole(role) {
-  filtroAtivo = role;
-
-  // Atualiza estado dos stat cards
-  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
-  const card = document.getElementById('stat-' + (role === 'todos' ? 'todos' : role));
-  if (card) card.classList.add('active');
-
-  // Mostra/oculta grupos
-  document.querySelectorAll('.group-section').forEach(g => {
-    const gr = g.dataset.role;
-    if (role === 'todos' || gr === role || (role === 'admin' && (gr === 'admin' || gr === 'super_admin'))) {
-      g.classList.remove('hidden');
-    } else {
-      g.classList.add('hidden');
-    }
-  });
-
-  buscar();
+function toggleModalAluno() {
+  var role = document.getElementById('modal_role').value;
+  document.getElementById('modal_campos_aluno').style.display = role === 'aluno' ? 'block' : 'none';
 }
-
-// ── BUSCA ────────────────────────────────────────────────────────────────
-function buscar() {
-  const termo = document.getElementById('searchInput').value.toLowerCase().trim();
-  let totalVisiveis = 0;
-
-  document.querySelectorAll('.group-section').forEach(grupo => {
-    if (grupo.classList.contains('hidden')) return;
-    const role = grupo.dataset.role;
-    const rows = grupo.querySelectorAll('.user-row');
-    let visiveis = [];
-
-    rows.forEach(row => {
-      const match = !termo ||
-        row.dataset.nome.includes(termo) ||
-        row.dataset.login.includes(termo) ||
-        row.dataset.email.includes(termo);
-      if (match) visiveis.push(row);
-    });
-
-    // Atualiza contador do grupo
-    const cnt = document.getElementById('count-' + role);
-    if (cnt) cnt.textContent = visiveis.length;
-
-    totalVisiveis += visiveis.length;
-
-    // Oculta grupo se não tem resultados
-    if (visiveis.length === 0) {
-      grupo.classList.add('hidden');
-    } else {
-      grupo.classList.remove('hidden');
-      paginar(role, visiveis, 1);
-    }
-  });
-
-  // Empty state
-  document.getElementById('emptyState').style.display = totalVisiveis === 0 ? 'block' : 'none';
-
-  // Resultado count
-  const rc = document.getElementById('resultCount');
-  rc.textContent = termo ? `${totalVisiveis} resultado${totalVisiveis !== 1 ? 's' : ''} encontrado${totalVisiveis !== 1 ? 's' : ''}` : '';
-}
-
-// ── PAGINAÇÃO ────────────────────────────────────────────────────────────
-function paginar(role, rows, pagina) {
-  paginasAtuais[role] = pagina;
-  const total = rows.length;
-  const totalPags = Math.ceil(total / POR_PAGINA);
-  const inicio = (pagina - 1) * POR_PAGINA;
-  const fim = inicio + POR_PAGINA;
-
-  rows.forEach((row, i) => {
-    row.classList.toggle('hidden', i < inicio || i >= fim);
-  });
-
-  // Mostra/oculta paginação
-  const pagWrap = document.getElementById('pag-' + role);
-  if (!pagWrap) return;
-
-  if (totalPags <= 1) {
-    pagWrap.style.display = 'none';
-    return;
-  }
-
-  pagWrap.style.display = 'flex';
-  document.getElementById('pag-info-' + role).textContent =
-    `Mostrando ${inicio + 1}–${Math.min(fim, total)} de ${total}`;
-
-  const btns = document.getElementById('pag-btns-' + role);
-  btns.innerHTML = '';
-
-  // Anterior
-  const prev = document.createElement('button');
-  prev.className = 'page-btn';
-  prev.innerHTML = '<i class="bi bi-chevron-left"></i>';
-  prev.disabled = pagina === 1;
-  prev.onclick = () => paginar(role, rows, pagina - 1);
-  btns.appendChild(prev);
-
-  // Números
-  for (let p = 1; p <= totalPags; p++) {
-    const btn = document.createElement('button');
-    btn.className = 'page-btn' + (p === pagina ? ' active' : '');
-    btn.textContent = p;
-    btn.onclick = () => paginar(role, rows, p);
-    btns.appendChild(btn);
-  }
-
-  // Próximo
-  const next = document.createElement('button');
-  next.className = 'page-btn';
-  next.innerHTML = '<i class="bi bi-chevron-right"></i>';
-  next.disabled = pagina === totalPags;
-  next.onclick = () => paginar(role, rows, pagina + 1);
-  btns.appendChild(next);
-}
-
-// ── INICIALIZA ───────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  // Ativa "todos" por padrão
-  const statTodos = document.getElementById('stat-todos');
-  if (statTodos) statTodos.classList.add('active');
-
-  // Inicializa paginação de cada grupo
-  document.querySelectorAll('.group-section').forEach(grupo => {
-    const role = grupo.dataset.role;
-    const rows = Array.from(grupo.querySelectorAll('.user-row'));
-    if (rows.length > POR_PAGINA) paginar(role, rows, 1);
-  });
-});
-
-
 </script>
 
 <!-- ── MODAL CONFIRMAÇÃO EXCLUSÃO ──────────────────────────── -->

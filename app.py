@@ -228,26 +228,39 @@ def relatorio_reservas():
     if usuario.role not in ["coordenador", "admin", "super_admin"]:
         return "Acesso negado", 403
 
-    # Filtros
-    turma = request.form.get("turma") if request.method == "POST" else None
-    disciplina = request.form.get("disciplina") if request.method == "POST" else None
-    status = request.form.get("status") if request.method == "POST" else None
+    # Redireciona POST para GET preservando filtros como query string
+    if request.method == "POST":
+        from flask import redirect, url_for
+        return redirect(url_for("relatorio_reservas",
+                                turma=request.form.get("turma", ""),
+                                disciplina=request.form.get("disciplina", ""),
+                                status=request.form.get("status", ""),
+                                page=1))
+
+    # Filtros via GET
+    turma = request.args.get("turma", "").strip()
+    disciplina = request.args.get("disciplina", "").strip()
+    status = request.args.get("status", "").strip()
+    page_rel = request.args.get("page", 1, type=int)
+    PER_PAGE_REL = 20
 
     query = ReservaLab.query
     if turma:
-        # Filtra pelo nome da turma associada
         query = query.join(ReservaLab.turma_rel).filter(Turma.nome.ilike(f"%{turma}%"))
     if disciplina:
         query = query.filter(ReservaLab.disciplina.ilike(f"%{disciplina}%"))
     if status:
         query = query.filter(ReservaLab.status == status)
 
-    reservas = query.order_by(ReservaLab.data.desc()).all()
+    query = query.order_by(ReservaLab.data.desc())
+    total_rel = query.count()
+    total_pages_rel = max(1, (total_rel + PER_PAGE_REL - 1) // PER_PAGE_REL)
+    page_rel = max(1, min(page_rel, total_pages_rel))
+    reservas = query.offset((page_rel - 1) * PER_PAGE_REL).limit(PER_PAGE_REL).all()
 
     # Para popular selects
     turmas = [t[0] for t in db.session.query(Turma.nome).join(ReservaLab, Turma.id == ReservaLab.turma_id).distinct().all() if t[0]]
     disciplinas = [d[0] for d in db.session.query(ReservaLab.disciplina).distinct().all() if d[0]]
-    # Status internos padronizados
     status_list = ["pending", "pre_approved", "approved", "rejected", "blocked"]
 
     return render_template(
@@ -256,11 +269,14 @@ def relatorio_reservas():
         turmas=turmas,
         disciplinas=disciplinas,
         status_list=status_list,
-        filtro_turma=turma or "",
-        filtro_disciplina=disciplina or "",
-        filtro_status=status or "",
+        filtro_turma=turma,
+        filtro_disciplina=disciplina,
+        filtro_status=status,
         usuario_id=usuario.id,
-        usuario_logado=usuario.login
+        usuario_logado=usuario.login,
+        page=page_rel,
+        total_pages=total_pages_rel,
+        total_rel=total_rel
     )
 
 
@@ -730,14 +746,37 @@ def admin_usuarios():
     if not is_admin(usuario):
         return "Acesso negado", 403
 
-    # Admin comum não vê super_admin
-    if is_super_admin(usuario):
-        usuarios = Usuario.query.all()
-    else:
-        usuarios = Usuario.query.filter(Usuario.role != 'super_admin').all()
+    busca       = request.args.get('q', '').strip()
+    filtro_role = request.args.get('role', '').strip()
+    page        = request.args.get('page', 1, type=int)
+    PER_PAGE    = 20
+
+    # Base da query — admin comum não vê super_admin
+    base_q = Usuario.query if is_super_admin(usuario) else Usuario.query.filter(Usuario.role != 'super_admin')
+    if busca:
+        base_q = base_q.filter(
+            db.or_(Usuario.nome.ilike(f'%{busca}%'), Usuario.login.ilike(f'%{busca}%'), Usuario.email.ilike(f'%{busca}%'))
+        )
+
+    # Contadores por role (para os cards) — sem filtro de role
+    count_total = base_q.count()
+    count_admin = base_q.filter(Usuario.role.in_(['admin', 'super_admin'])).count()
+    count_coord = base_q.filter(Usuario.role == 'coordenador').count()
+    count_prof  = base_q.filter(Usuario.role == 'professor').count()
+    count_aluno = base_q.filter(Usuario.role == 'aluno').count()
+
+    # Aplica filtro de role depois dos contadores
+    if filtro_role:
+        base_q = base_q.filter(Usuario.role == filtro_role)
+
+    total       = base_q.count()
+    total_pages = max(1, (total + PER_PAGE - 1) // PER_PAGE)
+    page        = max(1, min(page, total_pages))
+    usuarios    = base_q.order_by(Usuario.nome).offset((page - 1) * PER_PAGE).limit(PER_PAGE).all()
+
     turmas = Turma.query.filter_by(status='ativa').order_by(Turma.nome).all()
-    # Conta reservas por usuario para exibir aviso no modal de exclusao
-    # Conta reservas FUTURAS por usuario - filtra em Python por suportar DD/MM/YYYY e YYYY-MM-DD
+
+    # Conta reservas FUTURAS para os usuários da página atual
     from datetime import date as _date
     def _parse_data(d):
         try:
@@ -748,11 +787,26 @@ def admin_usuarios():
     todas_reservas_futuras = [r for r in ReservaLab.query.all() if _parse_data(r.data) >= hoje_d]
     reservas_por_usuario = {}
     for u in usuarios:
-        total = sum(1 for r in todas_reservas_futuras if r.usuario_id == u.id)
+        total_r = sum(1 for r in todas_reservas_futuras if r.usuario_id == u.id)
         if u.turma_id:
-            total += sum(1 for r in todas_reservas_futuras if r.turma_id == u.turma_id and r.usuario_id != u.id)
-        reservas_por_usuario[u.id] = total
-    return render_template("admin_usuarios.html", usuarios=usuarios, usuario_logado=usuario, turmas=turmas, reservas_por_usuario=reservas_por_usuario)
+            total_r += sum(1 for r in todas_reservas_futuras if r.turma_id == u.turma_id and r.usuario_id != u.id)
+        reservas_por_usuario[u.id] = total_r
+
+    return render_template("admin_usuarios.html",
+                           usuarios=usuarios,
+                           usuario_logado=usuario,
+                           turmas=turmas,
+                           reservas_por_usuario=reservas_por_usuario,
+                           page=page,
+                           total_pages=total_pages,
+                           total=total,
+                           filtro_role=filtro_role,
+                           busca=busca,
+                           count_total=count_total,
+                           count_admin=count_admin,
+                           count_coord=count_coord,
+                           count_prof=count_prof,
+                           count_aluno=count_aluno)
 
 @app.route("/admin/criar_usuario", methods=["POST"])
 def criar_usuario():
@@ -1384,8 +1438,36 @@ def admin_logs():
     if not is_super_admin(usuario):
         return "Acesso negado", 403
 
-    logs = LogAuditoria.query.order_by(LogAuditoria.timestamp.desc()).limit(500).all()
-    return render_template("admin_logs.html", logs=logs, usuario=usuario)
+    busca_log = request.args.get("q", "").strip()
+    filtro_acao = request.args.get("acao", "").strip()
+    page_log = request.args.get("page", 1, type=int)
+    PER_PAGE_LOG = 25
+
+    query_logs = LogAuditoria.query
+    if busca_log:
+        query_logs = query_logs.filter(
+            db.or_(LogAuditoria.acao.ilike(f"%{busca_log}%"), LogAuditoria.detalhes.ilike(f"%{busca_log}%"))
+        )
+    if filtro_acao:
+        query_logs = query_logs.filter(LogAuditoria.acao == filtro_acao)
+
+    query_logs = query_logs.order_by(LogAuditoria.timestamp.desc())
+    total_logs = query_logs.count()
+    total_pages_log = max(1, (total_logs + PER_PAGE_LOG - 1) // PER_PAGE_LOG)
+    page_log = max(1, min(page_log, total_pages_log))
+    logs = query_logs.offset((page_log - 1) * PER_PAGE_LOG).limit(PER_PAGE_LOG).all()
+
+    acoes_disponiveis = [a[0] for a in db.session.query(LogAuditoria.acao).distinct().order_by(LogAuditoria.acao).all() if a[0]]
+
+    return render_template("admin_logs.html",
+                           logs=logs,
+                           usuario=usuario,
+                           page=page_log,
+                           total_pages=total_pages_log,
+                           total_logs=total_logs,
+                           busca=busca_log,
+                           filtro_acao=filtro_acao,
+                           acoes_disponiveis=acoes_disponiveis)
 
 @app.route("/esqueci_senha", methods=["GET", "POST"])
 def esqueci_senha():
