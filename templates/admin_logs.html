@@ -39,28 +39,6 @@
     .filter-bar { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
     .empty-state { text-align: center; padding: 3rem; color: #94a3b8; }
     .empty-state i { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
-  
-    /* ── MOBILE RESPONSIVO ─────────────────────────────────── */
-    @media (max-width: 768px) {
-      .container { padding-left: 12px; padding-right: 12px; }
-      .page-header { padding: 1rem 0; }
-      .page-header h4 { font-size: 1.1rem; }
-      .page-header .d-flex { flex-wrap: wrap; gap: 8px; }
-      .filter-bar { flex-direction: column !important; align-items: flex-start !important; }
-      .filter-bar > div { width: 100%; }
-      .filter-bar input, .filter-bar select { width: 100% !important; min-width: unset !important; }
-      .filter-bar .ms-auto { margin-left: 0 !important; width: 100%; }
-      .filter-bar .ms-auto button { width: 100%; }
-      .table-responsive { -webkit-overflow-scrolling: touch; }
-      .table { font-size: 0.72rem; }
-      .table thead th, .table tbody td { padding: 7px 8px; }
-      /* Esconde IP em mobile */
-      .table thead th:nth-child(5),
-      .table tbody td:nth-child(5) { display: none; }
-    }
-    @media (max-width: 480px) {
-      .form-control, .form-select { font-size: 16px !important; }
-    }
   </style>
 </head>
 <body>
@@ -75,7 +53,7 @@
   <div class="container d-flex justify-content-between align-items-center">
     <div>
       <h4><i class="bi bi-journal-text me-2"></i>Logs de Auditoria</h4>
-      <div class="subtitle">Últimos 30 dias · Máximo 500 registros exibidos</div>
+      <div class="subtitle">{{ total_logs }} registro{{ 's' if total_logs != 1 }} · 25 por página</div>
     </div>
     <span style="font-size:0.75rem;font-weight:700;color:white;background:var(--unip-blue);padding:4px 12px;border-radius:20px;">
       {{ logs|length }} registro{{ 's' if logs|length != 1 }}
@@ -147,6 +125,37 @@
         </tbody>
       </table>
     </div>
+
+    {# Paginação #}
+    {% if total_pages > 1 %}
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top bg-light small text-muted flex-wrap gap-2">
+      <span>Mostrando {{ (page - 1) * 25 + 1 }}–{{ [page * 25, total_logs]|min }} de {{ total_logs }} registros</span>
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item {% if page == 1 %}disabled{% endif %}">
+            <a class="page-link" href="?q={{ busca }}&acao={{ filtro_acao }}&page={{ page - 1 }}">
+              <i class="bi bi-chevron-left"></i>
+            </a>
+          </li>
+          {% for p in range(1, total_pages + 1) %}
+            {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+              <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link" href="?q={{ busca }}&acao={{ filtro_acao }}&page={{ p }}">{{ p }}</a>
+              </li>
+            {% elif p == page - 3 or p == page + 3 %}
+              <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+          {% endfor %}
+          <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+            <a class="page-link" href="?q={{ busca }}&acao={{ filtro_acao }}&page={{ page + 1 }}">
+              <i class="bi bi-chevron-right"></i>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
     {% else %}
     <div class="empty-state">
       <i class="bi bi-journal-x"></i>
