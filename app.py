@@ -1174,7 +1174,7 @@ def coordenador_reservas():
                            usuario_logado=usuario)
 
 # ROTA DE APROVAÇÃO (CORRIGIDA PARA ADMIN FINALIZAR COORDENADOR)
-@app.route("/aprovar_reserva/<int:id>")
+@app.route("/aprovar_reserva/<int:id>", methods=["POST"])
 def aprovar_reserva(id):
     if "usuario" not in session: return redirect("/login")
     usuario = Usuario.query.filter_by(login=session["usuario"]).first()
@@ -1270,7 +1270,7 @@ def aprovar_reserva(id):
     db.session.commit()
     return redirect(url_for("coordenador_reservas"))
 
-@app.route("/rejeitar_reserva/<int:id>")
+@app.route("/rejeitar_reserva/<int:id>", methods=["POST"])
 def rejeitar_reserva(id):
     if "usuario" not in session:
         return redirect("/login")

@@ -61,14 +61,11 @@
 
         /* Cores de Status Hierárquico */
         .status-badge {
-            font-size: 0.63rem;
+            font-size: 0.65rem;
             font-weight: 800;
-            padding: 4px 8px;
-            border-radius: 20px;
+            padding: 4px 10px;
+            border-radius: 50px;
             text-transform: uppercase;
-            display: inline-block;
-            line-height: 1.3;
-            text-align: center;
         }
         .status-pending { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .status-pre { background: #e1f5fe; color: #01579b; border: 1px solid #b3e5fc; }
@@ -81,18 +78,15 @@
 </head>
 <body>
 
-<nav class="navbar navbar-unip navbar-dark mb-4 shadow" style="padding:0.6rem 0;">
+<nav class="navbar navbar-unip navbar-dark mb-5 shadow">
     <div class="container d-flex justify-content-between align-items-center">
-        <span class="navbar-brand fw-bold mb-0" style="font-size:0.95rem;">
-            <i class="bi bi-shield-lock-fill me-1"></i>
-            <span class="d-none d-md-inline">PAINEL DE DECISÃO</span>
-            <span class="d-md-none">GESTÃO</span>
-        </span>
-        <div class="d-flex align-items-center gap-2">
-            <span class="text-white-50 small d-none d-md-inline">{{ usuario_logado.nome }}</span>
-            <a href="/painel_unip" class="btn btn-sm btn-outline-light" style="font-size:0.75rem;padding:4px 12px;">
-                <i class="bi bi-arrow-left me-1"></i>Voltar
-            </a>
+        <div class="d-flex align-items-center">
+            <img src="https://www.unip.br/assets/img/logo/logo-unip.svg" alt="UNIP" height="35" class="me-3">
+            <h5 class="text-white mb-0 fw-bold border-start ps-3 d-none d-md-block">PAINEL DE DECISÃO</h5>
+        </div>
+        <div class="text-end">
+            <span class="text-white-50 small me-3">Logado como: <strong class="text-white">{{ usuario_logado.nome }}</strong></span>
+            <a href="/painel_unip" class="btn btn-sm btn-outline-light rounded-pill px-3">Voltar</a>
         </div>
     </div>
 </nav>
@@ -136,15 +130,24 @@
                             <div class="d-flex justify-content-center gap-2">
                                 {# LOGICA DE BOTÕES: Coordenador aprova Pending, Admin aprova tudo o que não for final #}
                                 {% if (usuario_logado.role == 'coordenador' and r.status == 'pending') or (usuario_logado.role in ['admin', 'super_admin']) %}
-                                <a href="{{ url_for('aprovar_reserva', id=r.id) }}" class="btn btn-action btn-approve">
-                                    <i class="bi bi-check-all me-1"></i> 
+                                <button type="button" class="btn btn-action btn-approve btn-acao"
+                                        data-acao="aprovar"
+                                        data-id="{{ r.id }}"
+                                        data-professor="{{ r.professor }}"
+                                        data-lab="{{ r.lab.nome }}"
+                                        data-data="{{ r.data }}">
+                                    <i class="bi bi-check-all me-1"></i>
                                     {% if usuario_logado.role in ['admin', 'super_admin'] %} APROVAR FINAL {% else %} PRÉ-APROVAR {% endif %}
-                                </a>
+                                </button>
                                 {% endif %}
-
-                                <a href="{{ url_for('rejeitar_reserva', id=r.id) }}" class="btn btn-action btn-reject">
+                                <button type="button" class="btn btn-action btn-reject btn-acao"
+                                        data-acao="rejeitar"
+                                        data-id="{{ r.id }}"
+                                        data-professor="{{ r.professor }}"
+                                        data-lab="{{ r.lab.nome }}"
+                                        data-data="{{ r.data }}">
                                     <i class="bi bi-x-circle"></i>
-                                </a>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -201,5 +204,109 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+{# Forms ocultos para POST #}
+<form id="formAprovar" method="POST" action="">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+<form id="formRejeitar" method="POST" action="">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
+{# Modal de confirmação #}
+<div class="modal fade" id="modalConfirmar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+      <div class="modal-header border-0 pb-0" id="modalHeader">
+        <div class="d-flex align-items-center gap-2">
+          <div id="modalIconeWrap" style="border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;">
+            <i id="modalIcone" class=""></i>
+          </div>
+          <h5 class="modal-title fw-bold mb-0" id="modalTitulo"></h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 py-3">
+        <p class="mb-1" id="modalTexto"></p>
+        <div class="bg-light rounded-3 p-3 mt-2 small">
+          <div><i class="bi bi-person me-1 text-muted"></i><strong id="modalProf"></strong></div>
+          <div><i class="bi bi-building me-1 text-muted"></i><span id="modalLab"></span></div>
+          <div><i class="bi bi-calendar me-1 text-muted"></i><span id="modalData"></span></div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 px-4 pb-4 pt-1 gap-2">
+        <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn fw-bold px-4" id="btnConfirmar" onclick="executarAcao()">
+          <span id="btnTexto"></span>
+          <span id="btnSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let acaoPendente = null;
+let idPendente   = null;
+
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.btn-acao');
+  if (!btn) return;
+  confirmarAcao(btn.dataset.acao, btn.dataset.id, btn.dataset.professor, btn.dataset.lab, btn.dataset.data);
+});
+
+function confirmarAcao(acao, id, professor, lab, data) {
+  acaoPendente = acao;
+  idPendente   = id;
+
+  const isAprovar = acao === 'aprovar';
+  document.getElementById('modalTitulo').textContent   = isAprovar ? 'Confirmar aprovação' : 'Confirmar rejeição';
+  document.getElementById('modalTexto').textContent    = isAprovar
+    ? 'Deseja aprovar a reserva abaixo?'
+    : 'Deseja rejeitar a reserva abaixo? Esta ação não pode ser desfeita.';
+  document.getElementById('modalProf').textContent  = professor;
+  document.getElementById('modalLab').textContent   = lab;
+  document.getElementById('modalData').textContent  = data;
+
+  const header    = document.getElementById('modalHeader');
+  const iconeWrap = document.getElementById('modalIconeWrap');
+  const icone     = document.getElementById('modalIcone');
+  const btn       = document.getElementById('btnConfirmar');
+  const btnTexto  = document.getElementById('btnTexto');
+
+  if (isAprovar) {
+    header.style.background    = '#f0fdf4';
+    iconeWrap.style.background = '#dcfce7';
+    icone.className            = 'bi bi-check-all text-success';
+    btn.className              = 'btn btn-success fw-bold px-4';
+    btnTexto.textContent       = 'Aprovar';
+  } else {
+    header.style.background    = '#fff1f2';
+    iconeWrap.style.background = '#fee2e2';
+    icone.className            = 'bi bi-x-circle-fill text-danger';
+    btn.className              = 'btn btn-danger fw-bold px-4';
+    btnTexto.textContent       = 'Rejeitar';
+  }
+
+  new bootstrap.Modal(document.getElementById('modalConfirmar')).show();
+}
+
+function executarAcao() {
+  const spinner  = document.getElementById('btnSpinner');
+  const btnTexto = document.getElementById('btnTexto');
+  const btn      = document.getElementById('btnConfirmar');
+
+  // Loading
+  spinner.classList.remove('d-none');
+  btnTexto.textContent = acaoPendente === 'aprovar' ? 'Aprovando...' : 'Rejeitando...';
+  btn.disabled = true;
+
+  const formId = acaoPendente === 'aprovar' ? 'formAprovar' : 'formRejeitar';
+  const rota   = acaoPendente === 'aprovar' ? '/aprovar_reserva/' : '/rejeitar_reserva/';
+  const form   = document.getElementById(formId);
+  form.action  = rota + idPendente;
+  form.submit();
+}
+</script>
 </body>
 </html>

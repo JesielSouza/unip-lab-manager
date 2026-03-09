@@ -621,12 +621,16 @@
                 <span class="badge bg-warning text-dark" style="font-size:0.6rem">Aguardando Coordenador</span>
             </div>
             <div class="notif-item-actions">
-                <a href="{{ url_for('aprovar_reserva', id=r.id) }}" class="btn btn-success btn-sm" style="font-size:0.7rem;padding:3px 10px">
+                <button type="button" class="btn btn-success btn-sm btn-acao" style="font-size:0.7rem;padding:3px 10px"
+                        data-acao="aprovar" data-id="{{ r.id }}" data-professor="{{ r.professor }}"
+                        data-lab="{{ r.lab.nome }}" data-data="{{ r.data }}">
                     <i class="bi bi-check-all"></i> Aprovar
-                </a>
-                <a href="{{ url_for('rejeitar_reserva', id=r.id) }}" class="btn btn-outline-danger btn-sm" style="font-size:0.7rem;padding:3px 10px">
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm btn-acao" style="font-size:0.7rem;padding:3px 10px"
+                        data-acao="rejeitar" data-id="{{ r.id }}" data-professor="{{ r.professor }}"
+                        data-lab="{{ r.lab.nome }}" data-data="{{ r.data }}">
                     <i class="bi bi-x"></i> Rejeitar
-                </a>
+                </button>
             </div>
         </div>
         {% endfor %}
@@ -642,12 +646,16 @@
                 <span class="badge bg-primary" style="font-size:0.6rem">Pré-aprovado — Falta aprovação final</span>
             </div>
             <div class="notif-item-actions">
-                <a href="{{ url_for('aprovar_reserva', id=r.id) }}" class="btn btn-success btn-sm" style="font-size:0.7rem;padding:3px 10px">
+                <button type="button" class="btn btn-success btn-sm btn-acao" style="font-size:0.7rem;padding:3px 10px"
+                        data-acao="aprovar" data-id="{{ r.id }}" data-professor="{{ r.professor }}"
+                        data-lab="{{ r.lab.nome }}" data-data="{{ r.data }}">
                     <i class="bi bi-check-all"></i> Aprovar Final
-                </a>
-                <a href="{{ url_for('rejeitar_reserva', id=r.id) }}" class="btn btn-outline-danger btn-sm" style="font-size:0.7rem;padding:3px 10px">
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm btn-acao" style="font-size:0.7rem;padding:3px 10px"
+                        data-acao="rejeitar" data-id="{{ r.id }}" data-professor="{{ r.professor }}"
+                        data-lab="{{ r.lab.nome }}" data-data="{{ r.data }}">
                     <i class="bi bi-x"></i> Rejeitar
-                </a>
+                </button>
             </div>
         </div>
         {% endfor %}
@@ -918,8 +926,14 @@
                     </span>
                 </div>
                 <div class="notif-item-actions">
-                    <a href="/aprovar_reserva/${r.id}" class="btn btn-success btn-sm" style="font-size:0.7rem;padding:3px 10px"><i class="bi bi-check-all"></i> Aprovar</a>
-                    <a href="/rejeitar_reserva/${r.id}" class="btn btn-outline-danger btn-sm" style="font-size:0.7rem;padding:3px 10px"><i class="bi bi-x"></i> Rejeitar</a>
+                    <button type="button" class="btn btn-success btn-sm" style="font-size:0.7rem;padding:3px 10px"
+                            onclick="confirmarAcao('aprovar', ${r.id}, '${r.professor}', '${r.lab_nome}', '${r.data}')">
+                        <i class="bi bi-check-all"></i> Aprovar
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" style="font-size:0.7rem;padding:3px 10px"
+                            onclick="confirmarAcao('rejeitar', ${r.id}, '${r.professor}', '${r.lab_nome}', '${r.data}')">
+                        <i class="bi bi-x"></i> Rejeitar
+                    </button>
                 </div>
             </div>`).join('');
     }
@@ -960,6 +974,111 @@
     .cal-detail-title { font-size:0.72rem; font-weight:700; color:#1e293b; }
     .cal-detail-info { font-size:0.63rem; color:#64748b; margin-top:1px; }
     .cal-detail-info i { margin-right:3px; }
-  </style>
+{# Forms ocultos para POST #}
+<form id="formAprovar" method="POST" action="">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+<form id="formRejeitar" method="POST" action="">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
+{# Modal de confirmação aprovação/rejeição #}
+<div class="modal fade" id="modalConfirmar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+      <div class="modal-header border-0 pb-0" id="modalHeader">
+        <div class="d-flex align-items-center gap-2">
+          <div id="modalIconeWrap" style="border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;">
+            <i id="modalIcone" class=""></i>
+          </div>
+          <h5 class="modal-title fw-bold mb-0" id="modalTitulo"></h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 py-3">
+        <p class="mb-2" id="modalTexto"></p>
+        <div class="bg-light rounded-3 p-3 small">
+          <div><i class="bi bi-person me-1 text-muted"></i><strong id="modalProf"></strong></div>
+          <div><i class="bi bi-building me-1 text-muted"></i><span id="modalLab"></span></div>
+          <div><i class="bi bi-calendar me-1 text-muted"></i><span id="modalData"></span></div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 px-4 pb-4 pt-1 gap-2">
+        <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn fw-bold px-4" id="btnConfirmar" onclick="executarAcao()">
+          <span id="btnTexto"></span>
+          <span id="btnSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let acaoPendente = null;
+let idPendente   = null;
+
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.btn-acao');
+  if (!btn) return;
+  confirmarAcao(btn.dataset.acao, btn.dataset.id, btn.dataset.professor, btn.dataset.lab, btn.dataset.data);
+});
+
+function confirmarAcao(acao, id, professor, lab, data) {
+  acaoPendente = acao;
+  idPendente   = id;
+
+  const isAprovar = acao === 'aprovar';
+  document.getElementById('modalTitulo').textContent = isAprovar ? 'Confirmar aprovação' : 'Confirmar rejeição';
+  document.getElementById('modalTexto').textContent  = isAprovar
+    ? 'Deseja aprovar a reserva abaixo?'
+    : 'Deseja rejeitar a reserva abaixo? Esta ação não pode ser desfeita.';
+  document.getElementById('modalProf').textContent  = professor;
+  document.getElementById('modalLab').textContent   = lab;
+  document.getElementById('modalData').textContent  = data;
+
+  const header    = document.getElementById('modalHeader');
+  const iconeWrap = document.getElementById('modalIconeWrap');
+  const icone     = document.getElementById('modalIcone');
+  const btn       = document.getElementById('btnConfirmar');
+  const btnTexto  = document.getElementById('btnTexto');
+
+  if (isAprovar) {
+    header.style.background    = '#f0fdf4';
+    iconeWrap.style.background = '#dcfce7';
+    icone.className            = 'bi bi-check-all text-success fs-5';
+    btn.className              = 'btn btn-success fw-bold px-4';
+    btnTexto.textContent       = 'Aprovar';
+  } else {
+    header.style.background    = '#fff1f2';
+    iconeWrap.style.background = '#fee2e2';
+    icone.className            = 'bi bi-x-circle-fill text-danger fs-5';
+    btn.className              = 'btn btn-danger fw-bold px-4';
+    btnTexto.textContent       = 'Rejeitar';
+  }
+
+  // Reset spinner
+  document.getElementById('btnSpinner').classList.add('d-none');
+  btn.disabled = false;
+
+  new bootstrap.Modal(document.getElementById('modalConfirmar')).show();
+}
+
+function executarAcao() {
+  const spinner  = document.getElementById('btnSpinner');
+  const btnTexto = document.getElementById('btnTexto');
+  const btn      = document.getElementById('btnConfirmar');
+
+  spinner.classList.remove('d-none');
+  btnTexto.textContent = acaoPendente === 'aprovar' ? 'Aprovando...' : 'Rejeitando...';
+  btn.disabled = true;
+
+  const formId = acaoPendente === 'aprovar' ? 'formAprovar' : 'formRejeitar';
+  const rota   = acaoPendente === 'aprovar' ? '/aprovar_reserva/' : '/rejeitar_reserva/';
+  const form   = document.getElementById(formId);
+  form.action  = rota + idPendente;
+  form.submit();
+}
+</script>
 </body>
 </html>
