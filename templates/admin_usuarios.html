@@ -348,10 +348,9 @@
           <div class="row g-2 mb-3">
             <div class="col-md-6">
               <label class="form-label">Cargo / Role</label>
-              <select class="form-select" name="role" id="modal_role" onchange="toggleModalAluno()">
+              <select class="form-select" name="role" id="modal_role">
                 <option value="professor">Professor</option>
                 <option value="coordenador">Coordenador</option>
-                <option value="aluno">Aluno</option>
                 {% if usuario_logado.role == 'super_admin' %}
                 <option value="admin">Administrador</option>
                 {% endif %}
@@ -362,28 +361,7 @@
               <input type="password" class="form-control" name="senha" required>
             </div>
           </div>
-          <div id="modal_campos_aluno" style="display:none;">
-            <div class="row g-2 mb-3">
-              <div class="col-md-8">
-                <label class="form-label">Turma</label>
-                <select class="form-select" name="turma_id">
-                  <option value="">Selecione...</option>
-                  {% for t in turmas %}
-                  <option value="{{ t.id }}">{{ t.nome }} — {{ t.curso }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Semestre</label>
-                <select class="form-select" name="semestre">
-                  <option value="">—</option>
-                  {% for i in range(1, 7) %}
-                  <option value="{{ i }}º Semestre">{{ i }}º</option>
-                  {% endfor %}
-                </select>
-              </div>
-            </div>
-          </div>
+
         </div>
         <div class="modal-footer border-0 pt-0 px-4">
           <button type="button" class="btn btn-light border rounded-3" data-bs-dismiss="modal">Cancelar</button>
@@ -532,10 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-function toggleModalAluno() {
-  var role = document.getElementById('modal_role').value;
-  document.getElementById('modal_campos_aluno').style.display = role === 'aluno' ? 'block' : 'none';
-}
+
 </script>
 
 <!-- ── MODAL CONFIRMAÇÃO EXCLUSÃO ──────────────────────────── -->
