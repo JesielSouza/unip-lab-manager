@@ -1470,9 +1470,10 @@ def painel_unip():
     # ─────────────────────────────────────────────────────────
 
     usuarios, todos_labs, todas_turmas = [], [], []
+    # Labs sempre carregados — necessário para o filtro do histórico em todos os roles
+    todos_labs = Laboratorio.query.order_by(Laboratorio.nome).all()
     if is_admin(usuario_logado):
         usuarios = Usuario.query.all()
-        todos_labs = Laboratorio.query.all()
         todas_turmas = Turma.query.all()
 
     # super_admin herda visual de admin no painel
