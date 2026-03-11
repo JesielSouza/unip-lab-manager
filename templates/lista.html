@@ -334,13 +334,17 @@
           </li>
           {% endif %}
 
-          {# Sair #}
+          {# Dark mode toggle #}
           <li class="nav-item">
             <button class="dark-toggle" id="darkToggle" onclick="toggleDark()" title="Alternar tema">
-          <i class="bi bi-moon-stars-fill" id="darkIcon"></i>
-          <span id="darkLabel">{% if dark_mode %}Claro{% else %}Escuro{% endif %}</span>
-        </button>
-        <a class="btn btn-outline-danger btn-sm w-100 text-start text-lg-center" href="/logout">
+              <i class="bi bi-moon-stars-fill" id="darkIcon"></i>
+              <span id="darkLabel">{% if dark_mode %}Claro{% else %}Escuro{% endif %}</span>
+            </button>
+          </li>
+
+          {# Sair #}
+          <li class="nav-item">
+            <a class="btn btn-outline-danger btn-sm w-100 text-start text-lg-center" href="/logout">
               <i class="bi bi-box-arrow-right me-1"></i> Sair
             </a>
           </li>
@@ -1230,5 +1234,33 @@
     .cal-detail-info { font-size:0.63rem; color:#64748b; margin-top:1px; }
     .cal-detail-info i { margin-right:3px; }
   </style>
+
+<script>
+  function toggleDark() {
+    fetch('/toggle_dark_mode', {
+      method: 'POST',
+      headers: {'X-CSRFToken': '{{ csrf_token() }}'}
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.dark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.getElementById('darkIcon').className = 'bi bi-sun-fill';
+        document.getElementById('darkLabel').textContent = 'Claro';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        document.getElementById('darkIcon').className = 'bi bi-moon-stars-fill';
+        document.getElementById('darkLabel').textContent = 'Escuro';
+      }
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const icon = document.getElementById('darkIcon');
+    const label = document.getElementById('darkLabel');
+    if (icon) icon.className = dark ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+    if (label) label.textContent = dark ? 'Claro' : 'Escuro';
+  });
+</script>
 </body>
 </html>
