@@ -25,13 +25,6 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 # Armazena token ativo por login (sessão única)
 _sessoes_ativas = {}
 
-@app.context_processor
-def inject_dark_mode():
-    dark = False
-    if "usuario" in session:
-        u = Usuario.query.filter_by(login=session["usuario"]).first()
-        dark = bool(u and u.dark_mode)
-    return {"dark_mode": dark}
 
 
 # ── RATE LIMITING DE LOGIN ────────────────────────────────────
@@ -1788,17 +1781,6 @@ def redefinir_senha(token):
     return render_template("redefinir_senha.html", token=token)
 
 
-@app.route("/toggle_dark_mode", methods=["POST"])
-def toggle_dark_mode():
-    if "usuario" not in session:
-        return {"ok": False}, 401
-    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario:
-        return {"ok": False}, 404
-    usuario.dark_mode = not usuario.dark_mode
-    db.session.commit()
-    return {"ok": True, "dark": usuario.dark_mode}
-
 
 @app.route("/logout")
 def logout():
@@ -1849,14 +1831,6 @@ def erro_405(e):
 
 # Inicializa o banco ao subir com gunicorn ou diretamente
 with app.app_context():
-    # Migration: garante coluna dark_mode antes de qualquer query
-    try:
-        from sqlalchemy import text
-        with db.engine.connect() as conn:
-            conn.execute(text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS dark_mode BOOLEAN DEFAULT FALSE NOT NULL"))
-            conn.commit()
-    except Exception:
-        pass  # PostgreSQL < 9.6 não suporta IF NOT EXISTS, ignora
     db.create_all()
     inicializar_unidade()
 

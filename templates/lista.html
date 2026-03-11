@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br" data-theme="{% if dark_mode %}dark{% endif %}">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8">
   <title>UNIP Lab Manager | Painel</title>
@@ -168,94 +168,7 @@
     }
     @keyframes btn-spin { to { transform: rotate(360deg); } }
   </style>
-<!-- DARK MODE VARS -->
-<style>
-  :root {
-    --dm-bg:        #f8fafc;
-    --dm-surface:   #ffffff;
-    --dm-border:    #e2e8f0;
-    --dm-text:      #1e293b;
-    --dm-text-muted:#64748b;
-    --dm-input-bg:  #ffffff;
-    --dm-hover:     #f8fafc;
-    --dm-shadow:    rgba(0,0,0,0.04);
-  }
-  [data-theme="dark"] {
-    --dm-bg:        #0f172a;
-    --dm-surface:   #1e293b;
-    --dm-border:    #334155;
-    --dm-text:      #e2e8f0;
-    --dm-text-muted:#94a3b8;
-    --dm-input-bg:  #1e293b;
-    --dm-hover:     #273449;
-    --dm-shadow:    rgba(0,0,0,0.3);
-    color-scheme: dark;
-  }
-  [data-theme="dark"] body                      { background: var(--dm-bg) !important; color: var(--dm-text) !important; }
-  [data-theme="dark"] .page-header              { background: var(--dm-surface) !important; border-color: var(--dm-border) !important; }
-  [data-theme="dark"] .page-header h4,
-  [data-theme="dark"] .page-header .subtitle    { color: var(--dm-text-muted) !important; }
-  [data-theme="dark"] .card, [data-theme="dark"] .filter-card,
-  [data-theme="dark"] .results-card, [data-theme="dark"] .kpi-card,
-  [data-theme="dark"] .section-card, [data-theme="dark"] .stat-card,
-  [data-theme="dark"] .modal-content            { background: var(--dm-surface) !important; border-color: var(--dm-border) !important; color: var(--dm-text) !important; }
-  [data-theme="dark"] .table                    { color: var(--dm-text) !important; }
-  [data-theme="dark"] .table thead th           { background: #273449 !important; color: var(--dm-text-muted) !important; border-color: var(--dm-border) !important; }
-  [data-theme="dark"] .table tbody td           { border-color: var(--dm-border) !important; color: var(--dm-text) !important; }
-  [data-theme="dark"] .table tbody tr:hover td  { background: var(--dm-hover) !important; }
-  [data-theme="dark"] .table-light              { background: #273449 !important; }
-  [data-theme="dark"] .form-control,
-  [data-theme="dark"] .form-select              { background: var(--dm-input-bg) !important; border-color: var(--dm-border) !important; color: var(--dm-text) !important; }
-  [data-theme="dark"] .form-control::placeholder{ color: var(--dm-text-muted) !important; }
-  [data-theme="dark"] .btn-outline-secondary    { color: var(--dm-text-muted) !important; border-color: var(--dm-border) !important; }
-  [data-theme="dark"] .btn-outline-secondary:hover { background: var(--dm-hover) !important; }
-  [data-theme="dark"] .btn-light, [data-theme="dark"] .btn-limpar { background: #273449 !important; color: var(--dm-text) !important; border-color: var(--dm-border) !important; }
-  [data-theme="dark"] .bg-white, [data-theme="dark"] .bg-light { background: var(--dm-surface) !important; }
-  [data-theme="dark"] .border, [data-theme="dark"] .border-top,
-  [data-theme="dark"] .border-bottom            { border-color: var(--dm-border) !important; }
-  [data-theme="dark"] .text-muted               { color: var(--dm-text-muted) !important; }
-  [data-theme="dark"] .text-dark                { color: var(--dm-text) !important; }
-  [data-theme="dark"] .shadow-sm                { box-shadow: 0 2px 8px var(--dm-shadow) !important; }
-  [data-theme="dark"] .dropdown-menu            { background: var(--dm-surface) !important; border-color: var(--dm-border) !important; }
-  [data-theme="dark"] .dropdown-item            { color: var(--dm-text) !important; }
-  [data-theme="dark"] .dropdown-item:hover      { background: var(--dm-hover) !important; }
-  [data-theme="dark"] .list-group-item          { background: var(--dm-surface) !important; border-color: var(--dm-border) !important; color: var(--dm-text) !important; }
-  [data-theme="dark"] .badge.bg-light           { background: #273449 !important; color: var(--dm-text) !important; }
-  [data-theme="dark"] .pagination .page-link    { background: var(--dm-surface) !important; border-color: var(--dm-border) !important; color: var(--dm-text) !important; }
-  [data-theme="dark"] .pagination .page-item.active .page-link { background: #003366 !important; border-color: #003366 !important; }
-  [data-theme="dark"] .modal-header, [data-theme="dark"] .modal-footer { border-color: var(--dm-border) !important; }
-  [data-theme="dark"] input[type="date"],
-  [data-theme="dark"] input[type="text"],
-  [data-theme="dark"] input[type="email"],
-  [data-theme="dark"] input[type="password"]    { background: var(--dm-input-bg) !important; color: var(--dm-text) !important; border-color: var(--dm-border) !important; }
-  [data-theme="dark"] .collapse                 { background: transparent !important; }
-  [data-theme="dark"] hr                        { border-color: var(--dm-border) !important; }
 
-  /* Toggle button */
-  .dark-toggle {
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 20px;
-    color: white;
-    cursor: pointer;
-    font-size: 0.78rem;
-    padding: 4px 12px;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    white-space: nowrap;
-  }
-  .dark-toggle:hover { background: rgba(255,255,255,0.15); }
-</style>
-
-<!-- DARK MODE SCRIPT -->
-<script>
-  (function() {
-    const dark = {{ 'true' if dark_mode else 'false' }};
-    if (dark) document.documentElement.setAttribute('data-theme', 'dark');
-  })();
-</script>
 
 </head>
 <body>
@@ -333,15 +246,6 @@
             </a>
           </li>
           {% endif %}
-
-          {# Dark mode toggle #}
-          <li class="nav-item">
-            <button class="dark-toggle" id="darkToggle" onclick="toggleDark()" title="Alternar tema">
-              <i class="bi bi-moon-stars-fill" id="darkIcon"></i>
-              <span id="darkLabel">{% if dark_mode %}Claro{% else %}Escuro{% endif %}</span>
-            </button>
-          </li>
-
           {# Sair #}
           <li class="nav-item">
             <a class="btn btn-outline-danger btn-sm w-100 text-start text-lg-center" href="/logout">
@@ -393,6 +297,9 @@
           {% if role in ['admin', 'coordenador'] %}
           <div class="d-flex gap-2 flex-wrap">
             {% if role == 'admin' %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-speedometer2 me-1"></i> Dashboard
+            </a>
             <a href="{{ url_for('admin_usuarios') }}" class="btn btn-outline-primary btn-sm">
               <i class="bi bi-people me-1"></i> Usuários
             </a>
@@ -1235,32 +1142,5 @@
     .cal-detail-info i { margin-right:3px; }
   </style>
 
-<script>
-  function toggleDark() {
-    fetch('/toggle_dark_mode', {
-      method: 'POST',
-      headers: {'X-CSRFToken': '{{ csrf_token() }}'}
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.dark) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        document.getElementById('darkIcon').className = 'bi bi-sun-fill';
-        document.getElementById('darkLabel').textContent = 'Claro';
-      } else {
-        document.documentElement.removeAttribute('data-theme');
-        document.getElementById('darkIcon').className = 'bi bi-moon-stars-fill';
-        document.getElementById('darkLabel').textContent = 'Escuro';
-      }
-    });
-  }
-  document.addEventListener('DOMContentLoaded', function() {
-    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const icon = document.getElementById('darkIcon');
-    const label = document.getElementById('darkLabel');
-    if (icon) icon.className = dark ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
-    if (label) label.textContent = dark ? 'Claro' : 'Escuro';
-  });
-</script>
 </body>
 </html>
