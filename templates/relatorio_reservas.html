@@ -198,6 +198,30 @@
     }
     .stat-num { font-size: 1.6rem; font-weight: 800; color: var(--unip-blue); line-height: 1; }
     .stat-label { font-size: 0.65rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-top: 4px; }
+
+    /* Botões exportar */
+    .btn-export-csv { background:#16a34a; color:white; border:none; border-radius:10px; font-weight:700; font-size:0.82rem; padding:8px 16px; transition:.2s; }
+    .btn-export-csv:hover { background:#15803d; color:white; }
+    .btn-export-pdf { background:#0891b2; color:white; border:none; border-radius:10px; font-weight:700; font-size:0.82rem; padding:8px 16px; transition:.2s; }
+    .btn-export-pdf:hover { background:#0e7490; color:white; }
+
+    /* ── PRINT / PDF ── */
+    @media print {
+      body { background: white !important; font-size: 11px; }
+      .navbar-unip, .page-header .subtitle, .filter-card,
+      .btn-filtrar, .btn-limpar, .btn-export-csv, .btn-export-pdf,
+      .pagination, .no-print { display: none !important; }
+      .page-header { border: none; padding: .5rem 0; margin-bottom: .75rem; }
+      .page-header h4 { font-size: 1rem; }
+      .results-card { box-shadow: none; border: 1px solid #ccc; border-radius: 0; }
+      .results-header { padding: .5rem 1rem; }
+      .table thead th { font-size: 0.65rem; padding: 6px 10px; }
+      .table tbody td { padding: 6px 10px; font-size: 0.78rem; }
+      .stat-card { border: 1px solid #ccc; border-radius: 4px; }
+      .print-title { display: block !important; }
+      a[href]:after { content: none !important; }
+    }
+    .print-title { display: none; font-size: 0.7rem; color: #64748b; margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -320,10 +344,24 @@
   <!-- Resultados -->
   <div class="results-card">
     <div class="results-header">
-      <span class="results-title"><i class="bi bi-table me-2"></i>Reservas Encontradas</span>
-      {% if reservas %}
-        <span class="results-count">{{ reservas | length }} resultado{{ 's' if reservas | length != 1 }}</span>
-      {% endif %}
+      <div>
+        <span class="results-title"><i class="bi bi-table me-2"></i>Reservas Encontradas</span>
+        <div class="print-title">
+          Filtros: turma={{ filtro_turma or 'todas' }} | disciplina={{ filtro_disciplina or 'todas' }} | status={{ filtro_status or 'todos' }}
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        {% if reservas %}
+          <span class="results-count no-print">{{ reservas | length }} resultado{{ 's' if reservas | length != 1 }}</span>
+        {% endif %}
+        <a href="{{ url_for('exportar_csv', turma=filtro_turma, disciplina=filtro_disciplina, status=filtro_status) }}"
+           class="btn btn-export-csv btn-sm no-print">
+          <i class="bi bi-filetype-csv me-1"></i> CSV
+        </a>
+        <button onclick="window.print()" class="btn btn-export-pdf btn-sm no-print">
+          <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+        </button>
+      </div>
     </div>
 
     {% if reservas %}

@@ -280,6 +280,60 @@ def relatorio_reservas():
     )
 
 
+@app.route("/relatorio_reservas/exportar_csv")
+def exportar_csv():
+    if "usuario" not in session:
+        return redirect("/login")
+    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not usuario or usuario.role not in ["coordenador", "admin", "super_admin"]:
+        return "Acesso negado", 403
+
+    import csv, io
+    from datetime import datetime as dt
+
+    turma      = request.args.get("turma", "").strip()
+    disciplina = request.args.get("disciplina", "").strip()
+    status     = request.args.get("status", "").strip()
+
+    query = ReservaLab.query
+    if turma:
+        query = query.join(ReservaLab.turma_rel).filter(Turma.nome.ilike(f"%{turma}%"))
+    if disciplina:
+        query = query.filter(ReservaLab.disciplina.ilike(f"%{disciplina}%"))
+    if status:
+        query = query.filter(ReservaLab.status == status)
+    reservas = query.order_by(ReservaLab.data.desc()).all()
+
+    status_labels = {
+        'approved': 'Aprovada', 'pending': 'Pendente',
+        'pre_approved': 'Pré-aprovada', 'rejected': 'Rejeitada', 'blocked': 'Bloqueio'
+    }
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=';')
+    writer.writerow(['Laboratório', 'Professor', 'Turma', 'Disciplina', 'Data', 'Início', 'Fim', 'Status'])
+    for r in reservas:
+        writer.writerow([
+            r.lab.nome if r.lab else '',
+            r.professor or '',
+            r.turma_rel.nome if r.turma_rel else '',
+            r.disciplina or '',
+            r.data or '',
+            r.horario_inicio or '',
+            r.horario_fim or '',
+            status_labels.get(r.status, r.status),
+        ])
+
+    output.seek(0)
+    filename = f"reservas_{dt.now().strftime('%Y%m%d_%H%M')}.csv"
+    from flask import Response
+    return Response(
+        '\ufeff' + output.getvalue(),  # BOM UTF-8 para Excel abrir corretamente
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
+
+
 @app.route("/")
 def index():
     if "usuario" in session:
