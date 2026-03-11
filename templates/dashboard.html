@@ -118,10 +118,55 @@
 
     /* ── MOBILE ── */
     @media (max-width: 768px) {
-      .kpi-num { font-size: 1.6rem; }
+      .container { padding-left: 12px; padding-right: 12px; }
+
+      /* KPI menor no mobile — empilha ícone em cima, texto embaixo */
+      .kpi-card { padding: 1rem; }
+      .kpi-card .d-flex { flex-direction: column; align-items: flex-start !important; gap: 8px !important; }
+      .kpi-icon { width: 36px; height: 36px; font-size: 1rem; border-radius: 10px; }
+      .kpi-num  { font-size: 1.5rem; }
+      .kpi-label { font-size: 0.65rem; letter-spacing: 0; }
+
+      /* Gráficos */
+      .chart-wrap canvas { max-height: 180px; }
+      #chartHorarios { max-height: 160px !important; }
+
+      /* Rankings */
+      .rank-name { font-size: 0.72rem; }
+      .rank-count { font-size: 0.7rem; }
       .section-body { padding: 1rem; }
+
+      /* Tabela */
       .mini-table { font-size: 0.72rem; }
       .mini-table thead th, .mini-table tbody td { padding: 8px 10px; }
+
+      /* Oculta colunas menos importantes na tabela no mobile */
+      .mini-table .col-hide-sm { display: none; }
+
+      /* Page header */
+      .page-header h4 { font-size: 1rem; }
+      .page-header .subtitle { font-size: 0.72rem; }
+    }
+
+    @media (max-width: 480px) {
+      body { font-size: 0.9rem; }
+      .navbar-brand { font-size: 0.85rem; }
+
+      /* KPIs: 2 por linha, compactos */
+      .kpi-num { font-size: 1.3rem; }
+      .kpi-label { font-size: 0.6rem; }
+
+      /* Gráfico de rosca menor */
+      .chart-wrap { max-width: 160px !important; }
+
+      /* Esconde o badge do usuário no header em telas muito pequenas */
+      .page-header .user-badge { display: none !important; }
+
+      /* Formulários (se houver) */
+      .form-control, .form-select, input, select, textarea {
+        font-size: 16px !important;
+        border-radius: 10px;
+      }
     }
   </style>
 </head>
@@ -144,7 +189,7 @@
       <h4><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
       <div class="subtitle">Visão geral do uso dos laboratórios</div>
     </div>
-    <span style="font-size:0.72rem;font-weight:700;background:#f1f5f9;color:#475569;padding:5px 14px;border-radius:20px;border:1px solid #e2e8f0;">
+    <span class="user-badge" style="font-size:0.72rem;font-weight:700;background:#f1f5f9;color:#475569;padding:5px 14px;border-radius:20px;border:1px solid #e2e8f0;">
       <i class="bi bi-person-fill me-1"></i>{{ usuario.nome }}
     </span>
   </div>
@@ -153,7 +198,7 @@
 <div class="container pb-5">
 
   {# ── KPIs ── #}
-  <div class="row g-3 mb-4">
+  <div class="row g-2 g-md-3 mb-4">
     <div class="col-6 col-md-4 col-lg-2">
       <div class="kpi-card blue">
         <div class="d-flex align-items-center gap-3">
@@ -263,7 +308,7 @@
         </div>
         <div class="section-body">
           {% if horarios_pico %}
-          <div class="chart-wrap" style="height:200px;">
+          <div class="chart-wrap" style="position:relative;height:200px;">
             <canvas id="chartHorarios"></canvas>
           </div>
           {% else %}
@@ -383,10 +428,10 @@
           <tr>
             <th>Laboratório</th>
             <th>Professor</th>
-            <th>Turma</th>
-            <th>Disciplina</th>
+            <th class="col-hide-sm">Turma</th>
+            <th class="col-hide-sm">Disciplina</th>
             <th>Data</th>
-            <th>Horário</th>
+            <th class="col-hide-sm">Horário</th>
           </tr>
         </thead>
         <tbody>
@@ -398,10 +443,10 @@
               </span>
             </td>
             <td class="fw-semibold">{{ r.professor }}</td>
-            <td>{{ r.turma_rel.nome if r.turma_rel else '—' }}</td>
-            <td class="text-muted">{{ r.disciplina }}</td>
+            <td class="col-hide-sm">{{ r.turma_rel.nome if r.turma_rel else '—' }}</td>
+            <td class="text-muted col-hide-sm">{{ r.disciplina }}</td>
             <td><i class="bi bi-calendar3 me-1 text-muted"></i>{{ r.data }}</td>
-            <td><i class="bi bi-clock me-1 text-muted"></i>{{ r.horario_inicio }} – {{ r.horario_fim }}</td>
+            <td class="col-hide-sm"><i class="bi bi-clock me-1 text-muted"></i>{{ r.horario_inicio }} – {{ r.horario_fim }}</td>
           </tr>
           {% endfor %}
         </tbody>
