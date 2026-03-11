@@ -354,7 +354,14 @@
                         <span class="badge rounded-pill bg-secondary px-3">PENDENTE</span>
                     {% endif %}
                   </div>
-                  <div class="col-md-3 text-end">
+                  <div class="col-md-3 text-end d-flex justify-content-end align-items-center gap-2">
+                    {% if reserva.status == 'approved' %}
+                    <button class="btn btn-sm btn-outline-secondary border-0"
+                            onclick="abrirQR({{ reserva.id }}, '{{ reserva.lab.nome|e }}', '{{ reserva.turma_rel.nome|e }}', '{{ reserva.professor|e }}', '{{ reserva.disciplina|e }}', '{{ reserva.data }}', '{{ reserva.horario_inicio }}', '{{ reserva.horario_fim }}')"
+                            title="Ver QR Code">
+                      <i class="bi bi-qr-code"></i>
+                    </button>
+                    {% endif %}
                     {% if session['usuario'] == reserva.professor or role == 'admin' %}
                     <a href="/excluir/{{ reserva.id }}" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('Deseja excluir?')">
                         <i class="bi bi-trash3"></i>
@@ -1142,5 +1149,92 @@
     .cal-detail-info i { margin-right:3px; }
   </style>
 
+
+<!-- ── MODAL QR CODE ── -->
+<div class="modal fade" id="modalQR" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-bold" id="qrModalTitulo">QR Code da Reserva</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <div id="qrcode" class="d-inline-block p-3 bg-white rounded-3 shadow-sm mb-3"></div>
+        <div id="qrInfoCard" class="card border-0 bg-light rounded-3 mx-auto" style="max-width:320px">
+          <div class="card-body py-3 px-4 text-start small">
+            <div class="fw-bold text-dark mb-2" id="qrLab" style="font-size:1rem"></div>
+            <div class="text-muted mb-1"><i class="bi bi-people me-1"></i><span id="qrTurma"></span></div>
+            <div class="text-muted mb-1"><i class="bi bi-person me-1"></i><span id="qrProf"></span></div>
+            <div class="text-muted mb-1"><i class="bi bi-book me-1"></i><span id="qrDisc"></span></div>
+            <div class="text-muted mb-1"><i class="bi bi-calendar-event me-1"></i><span id="qrData"></span></div>
+            <div class="text-muted"><i class="bi bi-clock me-1"></i><span id="qrHorario"></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0 justify-content-center gap-2">
+        <button class="btn btn-outline-secondary btn-sm" onclick="downloadQR()">
+          <i class="bi bi-download me-1"></i> Baixar QR
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- qrcode.js via CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  let qrInstance = null;
+
+  function abrirQR(id, lab, turma, professor, disciplina, data, hi, hf) {
+    // Limpa QR anterior
+    const container = document.getElementById('qrcode');
+    container.innerHTML = '';
+    if (qrInstance) { qrInstance = null; }
+
+    // Monta texto do QR
+    const texto = [
+      'UNIP Lab Manager',
+      'Reserva #' + id,
+      'Lab: ' + lab,
+      'Turma: ' + turma,
+      'Prof: ' + professor,
+      'Disciplina: ' + disciplina,
+      'Data: ' + data,
+      'Horario: ' + hi + ' - ' + hf,
+      'Status: APROVADO'
+    ].join('\n');
+
+    // Preenche info card
+    document.getElementById('qrLab').textContent = lab;
+    document.getElementById('qrTurma').textContent = turma;
+    document.getElementById('qrProf').textContent = professor;
+    document.getElementById('qrDisc').textContent = disciplina;
+    document.getElementById('qrData').textContent = data;
+    document.getElementById('qrHorario').textContent = hi + ' – ' + hf;
+    document.getElementById('qrModalTitulo').textContent = 'QR Code — Reserva #' + id;
+
+    // Gera QR
+    qrInstance = new QRCode(container, {
+      text: texto,
+      width: 200,
+      height: 200,
+      colorDark: '#1e3a5f',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    new bootstrap.Modal(document.getElementById('modalQR')).show();
+  }
+
+  function downloadQR() {
+    const canvas = document.querySelector('#qrcode canvas');
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = 'reserva-qrcode.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+</script>
 </body>
 </html>
