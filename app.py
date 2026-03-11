@@ -1849,17 +1849,16 @@ def erro_405(e):
 
 # Inicializa o banco ao subir com gunicorn ou diretamente
 with app.app_context():
+    # Migration: garante coluna dark_mode antes de qualquer query
+    try:
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS dark_mode BOOLEAN DEFAULT FALSE NOT NULL"))
+            conn.commit()
+    except Exception:
+        pass  # PostgreSQL < 9.6 não suporta IF NOT EXISTS, ignora
     db.create_all()
     inicializar_unidade()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')
-# Migration automática: adiciona coluna dark_mode se não existir
-with app.app_context():
-    try:
-        from sqlalchemy import text
-        with db.engine.connect() as conn:
-            conn.execute(text("ALTER TABLE usuario ADD COLUMN dark_mode BOOLEAN DEFAULT FALSE NOT NULL"))
-            conn.commit()
-    except Exception:
-        pass  # Coluna já existe
