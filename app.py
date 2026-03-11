@@ -1502,6 +1502,98 @@ def painel_unip():
 # Rota /bloquear_lab removida — use /admin/bloqueios (gerenciar_bloqueios)
 # Rotas /pre_aprovar_reserva e /confirmar_reserva removidas — use /aprovar_reserva (com lógica de role)
 
+
+@app.route("/dashboard")
+def dashboard():
+    if "usuario" not in session:
+        return redirect("/login")
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not usuario_logado or not is_admin(usuario_logado):
+        flash("Acesso restrito.", "danger")
+        return redirect("/painel_unip")
+
+    from datetime import date
+    from sqlalchemy import func
+
+    # KPIs gerais
+    total_reservas   = ReservaLab.query.count()
+    total_aprovadas  = ReservaLab.query.filter_by(status='approved').count()
+    total_pendentes  = ReservaLab.query.filter_by(status='pending').count()
+    total_rejeitadas = ReservaLab.query.filter_by(status='rejected').count()
+    total_usuarios   = Usuario.query.count()
+    total_labs       = Laboratorio.query.count()
+    taxa_aprovacao   = round((total_aprovadas / total_reservas * 100), 1) if total_reservas else 0
+
+    # Labs mais usados
+    labs_mais_usados = (
+        db.session.query(Laboratorio.nome, func.count(ReservaLab.id).label('total'))
+        .join(ReservaLab, ReservaLab.laboratorio_id == Laboratorio.id)
+        .filter(ReservaLab.status == 'approved')
+        .group_by(Laboratorio.id, Laboratorio.nome)
+        .order_by(func.count(ReservaLab.id).desc())
+        .limit(6).all()
+    )
+
+    # Horários de pico
+    horarios_pico = (
+        db.session.query(ReservaLab.horario_inicio, func.count(ReservaLab.id).label('total'))
+        .filter(ReservaLab.status == 'approved')
+        .group_by(ReservaLab.horario_inicio)
+        .order_by(func.count(ReservaLab.id).desc())
+        .limit(8).all()
+    )
+
+    # Distribuição por status
+    status_counts = (
+        db.session.query(ReservaLab.status, func.count(ReservaLab.id).label('total'))
+        .group_by(ReservaLab.status)
+        .all()
+    )
+
+    # Professores mais ativos
+    professores_ativos = (
+        db.session.query(ReservaLab.professor, func.count(ReservaLab.id).label('total'))
+        .filter(ReservaLab.status == 'approved')
+        .group_by(ReservaLab.professor)
+        .order_by(func.count(ReservaLab.id).desc())
+        .limit(5).all()
+    )
+
+    # Turmas mais ativas
+    turmas_ativas = (
+        db.session.query(Turma.nome, func.count(ReservaLab.id).label('total'))
+        .join(ReservaLab, ReservaLab.turma_id == Turma.id)
+        .filter(ReservaLab.status == 'approved')
+        .group_by(Turma.id, Turma.nome)
+        .order_by(func.count(ReservaLab.id).desc())
+        .limit(5).all()
+    )
+
+    # Últimas reservas aprovadas
+    ultimas_reservas = (
+        ReservaLab.query.filter_by(status='approved')
+        .order_by(ReservaLab.id.desc())
+        .limit(5).all()
+    )
+
+    return render_template("dashboard.html",
+        usuario=usuario_logado,
+        total_reservas=total_reservas,
+        total_aprovadas=total_aprovadas,
+        total_pendentes=total_pendentes,
+        total_rejeitadas=total_rejeitadas,
+        total_usuarios=total_usuarios,
+        total_labs=total_labs,
+        taxa_aprovacao=taxa_aprovacao,
+        labs_mais_usados=labs_mais_usados,
+        horarios_pico=horarios_pico,
+        status_counts=status_counts,
+        professores_ativos=professores_ativos,
+        turmas_ativas=turmas_ativas,
+        ultimas_reservas=ultimas_reservas,
+    )
+
+
 @app.route("/admin/logs")
 def admin_logs():
     if "usuario" not in session:
