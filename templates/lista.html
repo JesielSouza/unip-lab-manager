@@ -376,47 +376,97 @@
             </div>
             {% endfor %}
 
-            {# ── HISTÓRICO — colapsável com paginação ── #}
-            {% if reservas_vencidas or historico_total > 0 %}
+            {# ── HISTÓRICO — colapsável com paginação e filtros ── #}
+            {% if reservas_vencidas or historico_total > 0 or filtro_hist_lab or filtro_hist_status or filtro_hist_data_de or filtro_hist_data_ate %}
             <div class="mt-4" id="historicoWrap">
               <button class="btn btn-outline-secondary btn-sm w-100 mb-3" type="button"
                       data-bs-toggle="collapse" data-bs-target="#historicoReservas"
-                      {% if historico_page > 1 %}aria-expanded="true"{% endif %}>
+                      {% if historico_page > 1 or filtro_hist_lab or filtro_hist_status or filtro_hist_data_de or filtro_hist_data_ate %}aria-expanded="true"{% endif %}>
                 <i class="bi bi-clock-history me-1"></i>
                 Histórico ({{ historico_total }} encerrado{{ 's' if historico_total != 1 }})
                 <i class="bi bi-chevron-down ms-1"></i>
               </button>
-              <div class="collapse {% if historico_page > 1 %}show{% endif %}" id="historicoReservas">
-                {% for reserva in reservas_vencidas %}
-                  {{ card_reserva(reserva, vencida=true) }}
-                {% endfor %}
 
-                {# Paginação do histórico #}
+              <div class="collapse {% if historico_page > 1 or filtro_hist_lab or filtro_hist_status or filtro_hist_data_de or filtro_hist_data_ate %}show{% endif %}" id="historicoReservas">
+
+                {# ── FILTROS ── #}
+                <form method="get" action="#historicoReservas" class="mb-3 p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                  <div class="row g-2 align-items-end">
+                    <div class="col-6 col-md-3">
+                      <label class="form-label" style="font-size:0.65rem;font-weight:800;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Laboratório</label>
+                      <select name="hlab" class="form-select form-select-sm">
+                        <option value="">Todos</option>
+                        {% for lab in laboratorios %}
+                        <option value="{{ lab.id }}" {% if filtro_hist_lab == lab.id|string %}selected{% endif %}>{{ lab.nome }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                      <label class="form-label" style="font-size:0.65rem;font-weight:800;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Status</label>
+                      <select name="hstatus" class="form-select form-select-sm">
+                        <option value="">Todos</option>
+                        <option value="approved"     {% if filtro_hist_status == 'approved' %}selected{% endif %}>Aprovada</option>
+                        <option value="rejected"     {% if filtro_hist_status == 'rejected' %}selected{% endif %}>Rejeitada</option>
+                        <option value="pre_approved" {% if filtro_hist_status == 'pre_approved' %}selected{% endif %}>Pré-aprovada</option>
+                        <option value="pending"      {% if filtro_hist_status == 'pending' %}selected{% endif %}>Pendente</option>
+                      </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                      <label class="form-label" style="font-size:0.65rem;font-weight:800;color:#64748b;text-transform:uppercase;margin-bottom:4px;">De</label>
+                      <input type="date" name="hde" class="form-control form-control-sm" value="{{ filtro_hist_data_de }}">
+                    </div>
+                    <div class="col-6 col-md-2">
+                      <label class="form-label" style="font-size:0.65rem;font-weight:800;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Até</label>
+                      <input type="date" name="hate" class="form-control form-control-sm" value="{{ filtro_hist_data_ate }}">
+                    </div>
+                    <div class="col-12 col-md-3 d-flex gap-2">
+                      <button type="submit" class="btn btn-sm btn-primary flex-grow-1">
+                        <i class="bi bi-search me-1"></i> Filtrar
+                      </button>
+                      <a href="{{ url_for('painel_unip') }}#historicoReservas" class="btn btn-sm btn-light border">
+                        <i class="bi bi-x-lg"></i>
+                      </a>
+                    </div>
+                  </div>
+                </form>
+
+                {% if reservas_vencidas %}
+                  {% for reserva in reservas_vencidas %}
+                    {{ card_reserva(reserva, vencida=true) }}
+                  {% endfor %}
+                {% else %}
+                  <div class="text-center py-4 text-muted small">
+                    <i class="bi bi-search me-1"></i> Nenhum resultado para os filtros selecionados.
+                  </div>
+                {% endif %}
+
+                {# Paginação do histórico — preserva filtros #}
                 {% if historico_total_pages > 1 %}
                 <nav class="mt-3">
                   <ul class="pagination pagination-sm justify-content-center flex-wrap">
                     <li class="page-item {% if historico_page == 1 %}disabled{% endif %}">
-                      <a class="page-link" href="?hpage={{ historico_page - 1 }}#historicoReservas">
+                      <a class="page-link" href="?hpage={{ historico_page - 1 }}&hlab={{ filtro_hist_lab }}&hstatus={{ filtro_hist_status }}&hde={{ filtro_hist_data_de }}&hate={{ filtro_hist_data_ate }}#historicoReservas">
                         <i class="bi bi-chevron-left"></i>
                       </a>
                     </li>
                     {% for p in range(1, historico_total_pages + 1) %}
                       {% if p == 1 or p == historico_total_pages or (p >= historico_page - 2 and p <= historico_page + 2) %}
                         <li class="page-item {% if p == historico_page %}active{% endif %}">
-                          <a class="page-link" href="?hpage={{ p }}#historicoReservas">{{ p }}</a>
+                          <a class="page-link" href="?hpage={{ p }}&hlab={{ filtro_hist_lab }}&hstatus={{ filtro_hist_status }}&hde={{ filtro_hist_data_de }}&hate={{ filtro_hist_data_ate }}#historicoReservas">{{ p }}</a>
                         </li>
                       {% elif p == historico_page - 3 or p == historico_page + 3 %}
                         <li class="page-item disabled"><span class="page-link">…</span></li>
                       {% endif %}
                     {% endfor %}
                     <li class="page-item {% if historico_page == historico_total_pages %}disabled{% endif %}">
-                      <a class="page-link" href="?hpage={{ historico_page + 1 }}#historicoReservas">
+                      <a class="page-link" href="?hpage={{ historico_page + 1 }}&hlab={{ filtro_hist_lab }}&hstatus={{ filtro_hist_status }}&hde={{ filtro_hist_data_de }}&hate={{ filtro_hist_data_ate }}#historicoReservas">
                         <i class="bi bi-chevron-right"></i>
                       </a>
                     </li>
                   </ul>
                 </nav>
                 {% endif %}
+
               </div>
             </div>
             {% endif %}

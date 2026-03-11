@@ -1429,16 +1429,45 @@ def painel_unip():
     reservas_ativas = [r for r in ReservaLab.query.order_by(ReservaLab.data.asc()).all()
                        if r.data >= hoje_str]
 
-    # Histórico paginado — 10 por página
-    historico_page = request.args.get('hpage', 1, type=int)
+    # ── FILTROS DO HISTÓRICO ──────────────────────────────────
+    historico_page      = request.args.get('hpage', 1, type=int)
+    filtro_hist_lab     = request.args.get('hlab', '').strip()
+    filtro_hist_status  = request.args.get('hstatus', '').strip()
+    filtro_hist_data_de = request.args.get('hde', '').strip()
+    filtro_hist_data_ate= request.args.get('hate', '').strip()
+
     PER_PAGE = 10
-    todas_vencidas = [r for r in ReservaLab.query.order_by(ReservaLab.data.desc()).all()
-                      if r.data < hoje_str]
-    total_vencidas = len(todas_vencidas)
-    total_pages = max(1, (total_vencidas + PER_PAGE - 1) // PER_PAGE)
-    historico_page = max(1, min(historico_page, total_pages))
-    offset = (historico_page - 1) * PER_PAGE
-    reservas_vencidas = todas_vencidas[offset: offset + PER_PAGE]
+
+    # Parte de todas as reservas vencidas como base
+    todas_vencidas_query = [r for r in ReservaLab.query.order_by(ReservaLab.data.desc()).all()
+                            if r.data < hoje_str]
+
+    # Aplica filtros em Python (compatível com datas em string DD/MM/YYYY)
+    if filtro_hist_lab:
+        todas_vencidas_query = [r for r in todas_vencidas_query
+                                if r.lab and str(r.lab.id) == filtro_hist_lab]
+    if filtro_hist_status:
+        todas_vencidas_query = [r for r in todas_vencidas_query
+                                if r.status == filtro_hist_status]
+    if filtro_hist_data_de:
+        try:
+            de_str = datetime.strptime(filtro_hist_data_de, '%Y-%m-%d').strftime('%d/%m/%Y')
+            todas_vencidas_query = [r for r in todas_vencidas_query if r.data >= de_str]
+        except ValueError:
+            pass
+    if filtro_hist_data_ate:
+        try:
+            ate_str = datetime.strptime(filtro_hist_data_ate, '%Y-%m-%d').strftime('%d/%m/%Y')
+            todas_vencidas_query = [r for r in todas_vencidas_query if r.data <= ate_str]
+        except ValueError:
+            pass
+
+    total_vencidas  = len(todas_vencidas_query)
+    total_pages     = max(1, (total_vencidas + PER_PAGE - 1) // PER_PAGE)
+    historico_page  = max(1, min(historico_page, total_pages))
+    offset          = (historico_page - 1) * PER_PAGE
+    reservas_vencidas = todas_vencidas_query[offset: offset + PER_PAGE]
+    # ─────────────────────────────────────────────────────────
 
     usuarios, todos_labs, todas_turmas = [], [], []
     if is_admin(usuario_logado):
@@ -1458,6 +1487,10 @@ def painel_unip():
                            historico_page=historico_page,
                            historico_total_pages=total_pages,
                            historico_total=total_vencidas,
+                           filtro_hist_lab=filtro_hist_lab,
+                           filtro_hist_status=filtro_hist_status,
+                           filtro_hist_data_de=filtro_hist_data_de,
+                           filtro_hist_data_ate=filtro_hist_data_ate,
                            usuarios=usuarios,
                            laboratorios=todos_labs,
                            turmas=todas_turmas,
@@ -1608,104 +1641,6 @@ def logout():
     return redirect("/login")
 
 
-
-# ── DASHBOARD DE MÉTRICAS ────────────────────────────────────────────────────
-@app.route("/dashboard")
-def dashboard():
-    if "usuario" not in session:
-        return redirect("/login")
-    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
-    if not usuario or not is_admin(usuario):
-        return "Acesso negado", 403
-
-    from sqlalchemy import func, case
-
-    # ── Totais gerais ────────────────────────────────────────
-    total_reservas   = ReservaLab.query.count()
-    total_aprovadas  = ReservaLab.query.filter_by(status='approved').count()
-    total_pendentes  = ReservaLab.query.filter(ReservaLab.status.in_(['pending', 'pre_approved'])).count()
-    total_rejeitadas = ReservaLab.query.filter_by(status='rejected').count()
-    total_usuarios   = Usuario.query.filter_by(ativo=True).count()
-    total_labs       = Laboratorio.query.filter_by(status='ativo').count()
-    taxa_aprovacao   = round((total_aprovadas / total_reservas * 100) if total_reservas else 0, 1)
-
-    # ── Labs mais reservados ─────────────────────────────────
-    labs_mais_usados = (
-        db.session.query(Laboratorio.nome, func.count(ReservaLab.id).label('total'))
-        .join(ReservaLab, Laboratorio.id == ReservaLab.laboratorio_id)
-        .filter(ReservaLab.status == 'approved')
-        .group_by(Laboratorio.nome)
-        .order_by(func.count(ReservaLab.id).desc())
-        .limit(6)
-        .all()
-    )
-
-    # ── Reservas por horário de início (horários de pico) ────
-    horarios_pico = (
-        db.session.query(ReservaLab.horario_inicio, func.count(ReservaLab.id).label('total'))
-        .filter(ReservaLab.status == 'approved')
-        .group_by(ReservaLab.horario_inicio)
-        .order_by(func.count(ReservaLab.id).desc())
-        .limit(8)
-        .all()
-    )
-
-    # ── Reservas por status (para gráfico de rosca) ──────────
-    status_counts = (
-        db.session.query(ReservaLab.status, func.count(ReservaLab.id).label('total'))
-        .group_by(ReservaLab.status)
-        .all()
-    )
-
-    # ── Professores mais ativos ──────────────────────────────
-    professores_ativos = (
-        db.session.query(ReservaLab.professor, func.count(ReservaLab.id).label('total'))
-        .filter(ReservaLab.status == 'approved')
-        .group_by(ReservaLab.professor)
-        .order_by(func.count(ReservaLab.id).desc())
-        .limit(5)
-        .all()
-    )
-
-    # ── Turmas que mais usam os labs ─────────────────────────
-    turmas_ativas = (
-        db.session.query(Turma.nome, func.count(ReservaLab.id).label('total'))
-        .join(ReservaLab, Turma.id == ReservaLab.turma_id)
-        .filter(ReservaLab.status == 'approved')
-        .group_by(Turma.nome)
-        .order_by(func.count(ReservaLab.id).desc())
-        .limit(5)
-        .all()
-    )
-
-    # ── Últimas 5 reservas aprovadas ─────────────────────────
-    ultimas_reservas = (
-        ReservaLab.query
-        .filter_by(status='approved')
-        .order_by(ReservaLab.id.desc())
-        .limit(5)
-        .all()
-    )
-
-    return render_template(
-        "dashboard.html",
-        usuario=usuario,
-        role=usuario.role,
-        total_reservas=total_reservas,
-        total_aprovadas=total_aprovadas,
-        total_pendentes=total_pendentes,
-        total_rejeitadas=total_rejeitadas,
-        total_usuarios=total_usuarios,
-        total_labs=total_labs,
-        taxa_aprovacao=taxa_aprovacao,
-        labs_mais_usados=labs_mais_usados,
-        horarios_pico=horarios_pico,
-        status_counts=status_counts,
-        professores_ativos=professores_ativos,
-        turmas_ativas=turmas_ativas,
-        ultimas_reservas=ultimas_reservas,
-    )
-# ─────────────────────────────────────────────────────────────────────────────
 
 # -- ERROR HANDLERS --
 @app.errorhandler(400)
