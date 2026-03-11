@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="{% if dark_mode %}dark{% endif %}">
 <head>
   <meta charset="UTF-8">
   <title>UNIP Lab Manager | Painel</title>
@@ -168,6 +168,95 @@
     }
     @keyframes btn-spin { to { transform: rotate(360deg); } }
   </style>
+<!-- DARK MODE VARS -->
+<style>
+  :root {
+    --dm-bg:        #f8fafc;
+    --dm-surface:   #ffffff;
+    --dm-border:    #e2e8f0;
+    --dm-text:      #1e293b;
+    --dm-text-muted:#64748b;
+    --dm-input-bg:  #ffffff;
+    --dm-hover:     #f8fafc;
+    --dm-shadow:    rgba(0,0,0,0.04);
+  }
+  [data-theme="dark"] {
+    --dm-bg:        #0f172a;
+    --dm-surface:   #1e293b;
+    --dm-border:    #334155;
+    --dm-text:      #e2e8f0;
+    --dm-text-muted:#94a3b8;
+    --dm-input-bg:  #1e293b;
+    --dm-hover:     #273449;
+    --dm-shadow:    rgba(0,0,0,0.3);
+    color-scheme: dark;
+  }
+  [data-theme="dark"] body                      { background: var(--dm-bg) !important; color: var(--dm-text) !important; }
+  [data-theme="dark"] .page-header              { background: var(--dm-surface) !important; border-color: var(--dm-border) !important; }
+  [data-theme="dark"] .page-header h4,
+  [data-theme="dark"] .page-header .subtitle    { color: var(--dm-text-muted) !important; }
+  [data-theme="dark"] .card, [data-theme="dark"] .filter-card,
+  [data-theme="dark"] .results-card, [data-theme="dark"] .kpi-card,
+  [data-theme="dark"] .section-card, [data-theme="dark"] .stat-card,
+  [data-theme="dark"] .modal-content            { background: var(--dm-surface) !important; border-color: var(--dm-border) !important; color: var(--dm-text) !important; }
+  [data-theme="dark"] .table                    { color: var(--dm-text) !important; }
+  [data-theme="dark"] .table thead th           { background: #273449 !important; color: var(--dm-text-muted) !important; border-color: var(--dm-border) !important; }
+  [data-theme="dark"] .table tbody td           { border-color: var(--dm-border) !important; color: var(--dm-text) !important; }
+  [data-theme="dark"] .table tbody tr:hover td  { background: var(--dm-hover) !important; }
+  [data-theme="dark"] .table-light              { background: #273449 !important; }
+  [data-theme="dark"] .form-control,
+  [data-theme="dark"] .form-select              { background: var(--dm-input-bg) !important; border-color: var(--dm-border) !important; color: var(--dm-text) !important; }
+  [data-theme="dark"] .form-control::placeholder{ color: var(--dm-text-muted) !important; }
+  [data-theme="dark"] .btn-outline-secondary    { color: var(--dm-text-muted) !important; border-color: var(--dm-border) !important; }
+  [data-theme="dark"] .btn-outline-secondary:hover { background: var(--dm-hover) !important; }
+  [data-theme="dark"] .btn-light, [data-theme="dark"] .btn-limpar { background: #273449 !important; color: var(--dm-text) !important; border-color: var(--dm-border) !important; }
+  [data-theme="dark"] .bg-white, [data-theme="dark"] .bg-light { background: var(--dm-surface) !important; }
+  [data-theme="dark"] .border, [data-theme="dark"] .border-top,
+  [data-theme="dark"] .border-bottom            { border-color: var(--dm-border) !important; }
+  [data-theme="dark"] .text-muted               { color: var(--dm-text-muted) !important; }
+  [data-theme="dark"] .text-dark                { color: var(--dm-text) !important; }
+  [data-theme="dark"] .shadow-sm                { box-shadow: 0 2px 8px var(--dm-shadow) !important; }
+  [data-theme="dark"] .dropdown-menu            { background: var(--dm-surface) !important; border-color: var(--dm-border) !important; }
+  [data-theme="dark"] .dropdown-item            { color: var(--dm-text) !important; }
+  [data-theme="dark"] .dropdown-item:hover      { background: var(--dm-hover) !important; }
+  [data-theme="dark"] .list-group-item          { background: var(--dm-surface) !important; border-color: var(--dm-border) !important; color: var(--dm-text) !important; }
+  [data-theme="dark"] .badge.bg-light           { background: #273449 !important; color: var(--dm-text) !important; }
+  [data-theme="dark"] .pagination .page-link    { background: var(--dm-surface) !important; border-color: var(--dm-border) !important; color: var(--dm-text) !important; }
+  [data-theme="dark"] .pagination .page-item.active .page-link { background: #003366 !important; border-color: #003366 !important; }
+  [data-theme="dark"] .modal-header, [data-theme="dark"] .modal-footer { border-color: var(--dm-border) !important; }
+  [data-theme="dark"] input[type="date"],
+  [data-theme="dark"] input[type="text"],
+  [data-theme="dark"] input[type="email"],
+  [data-theme="dark"] input[type="password"]    { background: var(--dm-input-bg) !important; color: var(--dm-text) !important; border-color: var(--dm-border) !important; }
+  [data-theme="dark"] .collapse                 { background: transparent !important; }
+  [data-theme="dark"] hr                        { border-color: var(--dm-border) !important; }
+
+  /* Toggle button */
+  .dark-toggle {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 20px;
+    color: white;
+    cursor: pointer;
+    font-size: 0.78rem;
+    padding: 4px 12px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+  .dark-toggle:hover { background: rgba(255,255,255,0.15); }
+</style>
+
+<!-- DARK MODE SCRIPT -->
+<script>
+  (function() {
+    const dark = {{ 'true' if dark_mode else 'false' }};
+    if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+  })();
+</script>
+
 </head>
 <body>
 
@@ -247,7 +336,11 @@
 
           {# Sair #}
           <li class="nav-item">
-            <a class="btn btn-outline-danger btn-sm w-100 text-start text-lg-center" href="/logout">
+            <button class="dark-toggle" id="darkToggle" onclick="toggleDark()" title="Alternar tema">
+          <i class="bi bi-moon-stars-fill" id="darkIcon"></i>
+          <span id="darkLabel">{% if dark_mode %}Claro{% else %}Escuro{% endif %}</span>
+        </button>
+        <a class="btn btn-outline-danger btn-sm w-100 text-start text-lg-center" href="/logout">
               <i class="bi bi-box-arrow-right me-1"></i> Sair
             </a>
           </li>
@@ -301,9 +394,6 @@
             </a>
             <a href="{{ url_for('admin_config') }}" class="btn btn-outline-primary btn-sm">
               <i class="bi bi-building me-1"></i> Labs & Turmas
-            </a>
-            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary btn-sm">
-              <i class="bi bi-speedometer2 me-1"></i> Dashboard
             </a>
             {% endif %}
             <a href="{{ url_for('relatorio_reservas') }}" class="btn btn-outline-secondary btn-sm">
@@ -376,98 +466,47 @@
             </div>
             {% endfor %}
 
-            {# ── HISTÓRICO — colapsável com paginação e filtros ── #}
-            {% if reservas_vencidas or historico_total > 0 or filtro_hist_lab or filtro_hist_status or filtro_hist_data_de or filtro_hist_data_ate %}
+            {# ── HISTÓRICO — colapsável com paginação ── #}
+            {% if reservas_vencidas or historico_total > 0 %}
             <div class="mt-4" id="historicoWrap">
               <button class="btn btn-outline-secondary btn-sm w-100 mb-3" type="button"
                       data-bs-toggle="collapse" data-bs-target="#historicoReservas"
-                      {% if historico_page > 1 or filtro_hist_lab or filtro_hist_status or filtro_hist_data_de or filtro_hist_data_ate %}aria-expanded="true"{% endif %}>
+                      {% if historico_page > 1 %}aria-expanded="true"{% endif %}>
                 <i class="bi bi-clock-history me-1"></i>
                 Histórico ({{ historico_total }} encerrado{{ 's' if historico_total != 1 }})
                 <i class="bi bi-chevron-down ms-1"></i>
               </button>
+              <div class="collapse {% if historico_page > 1 %}show{% endif %}" id="historicoReservas">
+                {% for reserva in reservas_vencidas %}
+                  {{ card_reserva(reserva, vencida=true) }}
+                {% endfor %}
 
-              <div class="collapse {% if historico_page > 1 or filtro_hist_lab or filtro_hist_status or filtro_hist_data_de or filtro_hist_data_ate %}show{% endif %}" id="historicoReservas">
-
-                {# ── FILTROS ── #}
-                <form method="get" action="{{ url_for('painel_unip') }}" class="mb-3 p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <div class="row g-2 align-items-end">
-                    <div class="col-6 col-md-3">
-                      <label class="form-label" style="font-size:0.65rem;font-weight:800;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Laboratório</label>
-                      <select name="hlab" class="form-select form-select-sm">
-                        <option value="">Todos</option>
-                        {% for lab in laboratorios %}
-                        <option value="{{ lab.id }}" {% if filtro_hist_lab == lab.id|string %}selected{% endif %}>{{ lab.nome }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                    <div class="col-6 col-md-2">
-                      <label class="form-label" style="font-size:0.65rem;font-weight:800;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Status</label>
-                      <select name="hstatus" class="form-select form-select-sm">
-                        <option value="">Todos</option>
-                        <option value="approved"     {% if filtro_hist_status == 'approved' %}selected{% endif %}>Aprovada</option>
-                        <option value="rejected"     {% if filtro_hist_status == 'rejected' %}selected{% endif %}>Rejeitada</option>
-                        <option value="pre_approved" {% if filtro_hist_status == 'pre_approved' %}selected{% endif %}>Pré-aprovada</option>
-                        <option value="pending"      {% if filtro_hist_status == 'pending' %}selected{% endif %}>Pendente</option>
-                      </select>
-                    </div>
-                    <div class="col-6 col-md-2">
-                      <label class="form-label" style="font-size:0.65rem;font-weight:800;color:#64748b;text-transform:uppercase;margin-bottom:4px;">De</label>
-                      <input type="date" name="hde" class="form-control form-control-sm" value="{{ filtro_hist_data_de }}">
-                    </div>
-                    <div class="col-6 col-md-2">
-                      <label class="form-label" style="font-size:0.65rem;font-weight:800;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Até</label>
-                      <input type="date" name="hate" class="form-control form-control-sm" value="{{ filtro_hist_data_ate }}">
-                    </div>
-                    <div class="col-12 col-md-3 d-flex gap-2">
-                      <button type="submit" class="btn btn-sm btn-primary flex-grow-1">
-                        <i class="bi bi-search me-1"></i> Filtrar
-                      </button>
-                      <a href="{{ url_for('painel_unip') }}#historicoReservas" class="btn btn-sm btn-light border">
-                        <i class="bi bi-x-lg"></i>
-                      </a>
-                    </div>
-                  </div>
-                </form>
-
-                {% if reservas_vencidas %}
-                  {% for reserva in reservas_vencidas %}
-                    {{ card_reserva(reserva, vencida=true) }}
-                  {% endfor %}
-                {% else %}
-                  <div class="text-center py-4 text-muted small">
-                    <i class="bi bi-search me-1"></i> Nenhum resultado para os filtros selecionados.
-                  </div>
-                {% endif %}
-
-                {# Paginação do histórico — preserva filtros #}
+                {# Paginação do histórico #}
                 {% if historico_total_pages > 1 %}
                 <nav class="mt-3">
                   <ul class="pagination pagination-sm justify-content-center flex-wrap">
                     <li class="page-item {% if historico_page == 1 %}disabled{% endif %}">
-                      <a class="page-link" href="?hpage={{ historico_page - 1 }}&hlab={{ filtro_hist_lab }}&hstatus={{ filtro_hist_status }}&hde={{ filtro_hist_data_de }}&hate={{ filtro_hist_data_ate }}#historicoReservas">
+                      <a class="page-link" href="?hpage={{ historico_page - 1 }}#historicoReservas">
                         <i class="bi bi-chevron-left"></i>
                       </a>
                     </li>
                     {% for p in range(1, historico_total_pages + 1) %}
                       {% if p == 1 or p == historico_total_pages or (p >= historico_page - 2 and p <= historico_page + 2) %}
                         <li class="page-item {% if p == historico_page %}active{% endif %}">
-                          <a class="page-link" href="?hpage={{ p }}&hlab={{ filtro_hist_lab }}&hstatus={{ filtro_hist_status }}&hde={{ filtro_hist_data_de }}&hate={{ filtro_hist_data_ate }}#historicoReservas">{{ p }}</a>
+                          <a class="page-link" href="?hpage={{ p }}#historicoReservas">{{ p }}</a>
                         </li>
                       {% elif p == historico_page - 3 or p == historico_page + 3 %}
                         <li class="page-item disabled"><span class="page-link">…</span></li>
                       {% endif %}
                     {% endfor %}
                     <li class="page-item {% if historico_page == historico_total_pages %}disabled{% endif %}">
-                      <a class="page-link" href="?hpage={{ historico_page + 1 }}&hlab={{ filtro_hist_lab }}&hstatus={{ filtro_hist_status }}&hde={{ filtro_hist_data_de }}&hate={{ filtro_hist_data_ate }}#historicoReservas">
+                      <a class="page-link" href="?hpage={{ historico_page + 1 }}#historicoReservas">
                         <i class="bi bi-chevron-right"></i>
                       </a>
                     </li>
                   </ul>
                 </nav>
                 {% endif %}
-
               </div>
             </div>
             {% endif %}

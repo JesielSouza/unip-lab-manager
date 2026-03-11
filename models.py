@@ -26,6 +26,9 @@ class Usuario(db.Model):
     reset_token = db.Column(db.String(64), nullable=True)
     reset_token_expiry = db.Column(db.DateTime, nullable=True)
 
+    # Preferência de tema
+    dark_mode = db.Column(db.Boolean, default=False, nullable=False)
+
 class Laboratorio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(50), unique=True, nullable=False)

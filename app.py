@@ -25,6 +25,15 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 # Armazena token ativo por login (sessão única)
 _sessoes_ativas = {}
 
+@app.context_processor
+def inject_dark_mode():
+    dark = False
+    if "usuario" in session:
+        u = Usuario.query.filter_by(login=session["usuario"]).first()
+        dark = bool(u and u.dark_mode)
+    return {"dark_mode": dark}
+
+
 # ── RATE LIMITING DE LOGIN ────────────────────────────────────
 # { ip: [timestamp, timestamp, ...] }
 _tentativas_login = defaultdict(list)
@@ -1779,6 +1788,18 @@ def redefinir_senha(token):
     return render_template("redefinir_senha.html", token=token)
 
 
+@app.route("/toggle_dark_mode", methods=["POST"])
+def toggle_dark_mode():
+    if "usuario" not in session:
+        return {"ok": False}, 401
+    usuario = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not usuario:
+        return {"ok": False}, 404
+    usuario.dark_mode = not usuario.dark_mode
+    db.session.commit()
+    return {"ok": True, "dark": usuario.dark_mode}
+
+
 @app.route("/logout")
 def logout():
     registrar_log("LOGOUT", f"Logout realizado")
@@ -1833,3 +1854,12 @@ with app.app_context():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')
+# Migration automática: adiciona coluna dark_mode se não existir
+with app.app_context():
+    try:
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text("ALTER TABLE usuario ADD COLUMN dark_mode BOOLEAN DEFAULT FALSE NOT NULL"))
+            conn.commit()
+    except Exception:
+        pass  # Coluna já existe
