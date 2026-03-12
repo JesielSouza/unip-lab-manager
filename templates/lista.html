@@ -1160,7 +1160,7 @@
       </div>
       <div class="modal-body text-center py-4">
         <div id="qrcode" class="d-inline-block p-3 bg-white rounded-3 shadow-sm mb-3"></div>
-        <div id="qrInfoCard" class="card border-0 bg-light rounded-3 mx-auto" style="max-width:320px">
+        <div class="card border-0 bg-light rounded-3 mx-auto" style="max-width:320px">
           <div class="card-body py-3 px-4 text-start small">
             <div class="fw-bold text-dark mb-2" id="qrLab" style="font-size:1rem"></div>
             <div class="text-muted mb-1"><i class="bi bi-people me-1"></i><span id="qrTurma"></span></div>
@@ -1181,31 +1181,15 @@
   </div>
 </div>
 
-<!-- qrcode.js via CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-  let qrInstance = null;
-
   function abrirQR(id, lab, turma, professor, disciplina, data, hi, hf) {
-    // Limpa QR anterior
     const container = document.getElementById('qrcode');
     container.innerHTML = '';
-    if (qrInstance) { qrInstance = null; }
 
-    // Monta texto do QR
-    const texto = [
-      'UNIP Lab Manager',
-      'Reserva #' + id,
-      'Lab: ' + lab,
-      'Turma: ' + turma,
-      'Prof: ' + professor,
-      'Disciplina: ' + disciplina,
-      'Data: ' + data,
-      'Horario: ' + hi + ' - ' + hf,
-      'Status: APROVADO'
-    ].join('\n');
+    // Texto compacto para não estourar o limite do QR
+    const texto = 'Reserva#' + id + ' ' + lab + ' ' + data + ' ' + hi + '-' + hf;
 
-    // Preenche info card
     document.getElementById('qrLab').textContent = lab;
     document.getElementById('qrTurma').textContent = turma;
     document.getElementById('qrProf').textContent = professor;
@@ -1214,14 +1198,13 @@
     document.getElementById('qrHorario').textContent = hi + ' – ' + hf;
     document.getElementById('qrModalTitulo').textContent = 'QR Code — Reserva #' + id;
 
-    // Gera QR
-    qrInstance = new QRCode(container, {
+    new QRCode(container, {
       text: texto,
       width: 200,
       height: 200,
       colorDark: '#1e3a5f',
       colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.M
+      correctLevel: QRCode.CorrectLevel.L
     });
 
     new bootstrap.Modal(document.getElementById('modalQR')).show();
