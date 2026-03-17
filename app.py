@@ -164,6 +164,11 @@ def is_super_admin(usuario):
 def login_aluno_valido(login):
     """Aluno deve usar RA com apenas dígitos."""
     return bool(re.fullmatch(r'\d+', (login or '').strip()))
+
+def senha_minima_valida(senha, tamanho_minimo=6):
+    """Garante validaÃ§Ã£o server-side de senha mÃ­nima."""
+    senha = (senha or "").strip()
+    return len(senha) >= tamanho_minimo
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── CONTROLE DE SESSÃO ───────────────────────────────────────────────────────
@@ -408,6 +413,9 @@ def cadastro():
         login = (request.form.get("login") or "").strip()
         email = request.form.get("email")
         senha = request.form.get("senha")
+        if not senha_minima_valida(senha):
+            flash("A senha deve ter pelo menos 6 caracteres.", "danger")
+            return render_template('cadastro.html')
 
         if not login_aluno_valido(login):
             flash("O RA deve conter apenas números.", "danger")
@@ -887,6 +895,9 @@ def criar_usuario():
     email_novo = request.form.get("email")
     role_nova = request.form.get("role")
     senha_plana = request.form.get("senha")
+    if not senha_minima_valida(senha_plana):
+        flash("A senha deve ter pelo menos 6 caracteres.", "danger")
+        return redirect(url_for("admin_usuarios"))
 
     if role_nova == 'aluno' and not login_aluno_valido(login_novo):
         flash("Para alunos, o campo login deve conter apenas números no RA.", "danger")
@@ -968,6 +979,10 @@ def editar_usuario(id):
     # Se enviou nova_senha, criptografa e atualiza. Se não, mantém a atual.
     nova_senha = request.form.get("nova_senha")
     if nova_senha and nova_senha.strip() != "":
+        if not senha_minima_valida(nova_senha):
+            flash("A senha deve ter pelo menos 6 caracteres.", "danger")
+            turmas = Turma.query.filter_by(status='ativa').order_by(Turma.nome).all()
+            return render_template("editar_usuario.html", user=user, turmas=turmas)
         user.senha_hash = bcrypt.hashpw(nova_senha.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
     try:
@@ -1018,9 +1033,14 @@ def admin_perfil():
         session.clear()
         return redirect("/login")
     if request.method == "POST":
-        usuario.login = request.form["login"]
-        usuario.email = request.form["email"]
+        novo_login = request.form["login"]
+        novo_email = request.form["email"]
         nova_senha = request.form.get("nova_senha")
+        if nova_senha and not senha_minima_valida(nova_senha):
+            flash("A senha deve ter pelo menos 6 caracteres.", "danger")
+            return render_template("admin_perfil.html", usuario=usuario)
+        usuario.login = novo_login
+        usuario.email = novo_email
         if nova_senha:
             usuario.senha_hash = bcrypt.hashpw(nova_senha.encode(), bcrypt.gensalt()).decode()
         db.session.commit()
