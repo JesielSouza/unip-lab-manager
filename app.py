@@ -517,6 +517,7 @@ def api_notificacoes():
 @app.route("/api/eventos")
 def api_eventos():
     try:
+        from sqlalchemy import case, func
         from datetime import date
         from datetime import timedelta
         inicio_str = (request.args.get("start") or "").strip()
@@ -541,7 +542,23 @@ def api_eventos():
             except ValueError:
                 return None
 
-        reservas = ReservaLab.query.filter(ReservaLab.status != 'rejected').all()
+        data_reserva_sql = case(
+            (
+                ReservaLab.data.like('%/%/%'),
+                func.substr(ReservaLab.data, 7, 4) + '-' +
+                func.substr(ReservaLab.data, 4, 2) + '-' +
+                func.substr(ReservaLab.data, 1, 2)
+            ),
+            else_=ReservaLab.data
+        )
+
+        reservas_query = ReservaLab.query.filter(ReservaLab.status != 'rejected')
+        if inicio_str:
+            reservas_query = reservas_query.filter(data_reserva_sql >= inicio_str)
+        if fim_str:
+            reservas_query = reservas_query.filter(data_reserva_sql < fim_str)
+
+        reservas = reservas_query.all()
         eventos = []
 
         for r in reservas:
@@ -582,12 +599,14 @@ def api_eventos():
             })
 
         # Adiciona bloqueios como eventos de fundo vermelhos
-        bloqueios = BloqueioLab.query.all()
+        bloqueios_query = BloqueioLab.query
+        if inicio:
+            bloqueios_query = bloqueios_query.filter(BloqueioLab.data_fim >= inicio)
+        if fim:
+            bloqueios_query = bloqueios_query.filter(BloqueioLab.data_inicio < fim)
+
+        bloqueios = bloqueios_query.all()
         for b in bloqueios:
-            if inicio and b.data_fim < inicio:
-                continue
-            if fim and b.data_inicio >= fim:
-                continue
             nome_lab = b.lab_rel.nome if b.lab_rel else "Laboratório"
             # +1 dia pois o FullCalendar usa end exclusivo
             data_fim_exclusivo = (b.data_fim + timedelta(days=1)).strftime('%Y-%m-%d')
