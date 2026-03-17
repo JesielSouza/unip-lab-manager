@@ -1,5 +1,5 @@
 from sqlalchemy import or_
-from models import ReservaLab, db, Usuario, Laboratorio, Turma, BloqueioLab, LogAuditoria
+from models import ReservaLab, db, Usuario, Laboratorio, Turma, BloqueioLab, LogAuditoria, Equipamento
 from flask import Flask, jsonify, render_template, request, redirect, session, url_for, flash
 from datetime import datetime
 import os
@@ -517,11 +517,57 @@ def api_notificacoes():
 @app.route("/api/eventos")
 def api_eventos():
     try:
+        from sqlalchemy import case, func
+        from datetime import date
         from datetime import timedelta
-        reservas = ReservaLab.query.filter(ReservaLab.status != 'rejected').all()
+        inicio_str = (request.args.get("start") or "").strip()
+        fim_str = (request.args.get("end") or "").strip()
+        inicio = None
+        fim = None
+        try:
+            if inicio_str:
+                inicio = date.fromisoformat(inicio_str)
+            if fim_str:
+                fim = date.fromisoformat(fim_str)
+        except ValueError:
+            return jsonify([])
+
+        def parse_data_reserva(valor):
+            if not valor:
+                return None
+            try:
+                if "-" in valor:
+                    return date.fromisoformat(valor)
+                return datetime.strptime(valor, '%d/%m/%Y').date()
+            except ValueError:
+                return None
+
+        data_reserva_sql = case(
+            (
+                ReservaLab.data.like('%/%/%'),
+                func.substr(ReservaLab.data, 7, 4) + '-' +
+                func.substr(ReservaLab.data, 4, 2) + '-' +
+                func.substr(ReservaLab.data, 1, 2)
+            ),
+            else_=ReservaLab.data
+        )
+
+        reservas_query = ReservaLab.query.filter(ReservaLab.status != 'rejected')
+        if inicio_str:
+            reservas_query = reservas_query.filter(data_reserva_sql >= inicio_str)
+        if fim_str:
+            reservas_query = reservas_query.filter(data_reserva_sql < fim_str)
+
+        reservas = reservas_query.all()
         eventos = []
 
         for r in reservas:
+            data_reserva = parse_data_reserva(r.data)
+            if inicio and (not data_reserva or data_reserva < inicio):
+                continue
+            if fim and (not data_reserva or data_reserva >= fim):
+                continue
+
             cor = "#003366"  # Azul UNIP
             if r.status in ['pending', 'pre_approved']:
                 cor = "#ffc107"  # Amarelo
@@ -534,7 +580,7 @@ def api_eventos():
 
             # Converte data de DD/MM/YYYY para YYYY-MM-DD para o FullCalendar
             try:
-                data_iso = datetime.strptime(r.data, '%d/%m/%Y').strftime('%Y-%m-%d')
+                data_iso = data_reserva.isoformat() if data_reserva else datetime.strptime(r.data, '%d/%m/%Y').strftime('%Y-%m-%d')
             except Exception:
                 data_iso = r.data
 
@@ -553,7 +599,13 @@ def api_eventos():
             })
 
         # Adiciona bloqueios como eventos de fundo vermelhos
-        bloqueios = BloqueioLab.query.all()
+        bloqueios_query = BloqueioLab.query
+        if inicio:
+            bloqueios_query = bloqueios_query.filter(BloqueioLab.data_fim >= inicio)
+        if fim:
+            bloqueios_query = bloqueios_query.filter(BloqueioLab.data_inicio < fim)
+
+        bloqueios = bloqueios_query.all()
         for b in bloqueios:
             nome_lab = b.lab_rel.nome if b.lab_rel else "Laboratório"
             # +1 dia pois o FullCalendar usa end exclusivo
@@ -1163,6 +1215,140 @@ def criar_turma():
     db.session.commit()
     flash("Turma criada!", "success")
     return redirect(url_for('painel_unip'))
+
+
+@app.route("/admin/equipamentos")
+def admin_equipamentos():
+    if "usuario" not in session:
+        return redirect("/login")
+
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not is_admin(usuario_logado):
+        return redirect(url_for('painel_unip'))
+
+    equipamentos = Equipamento.query.join(Laboratorio).order_by(Laboratorio.nome, Equipamento.nome).all()
+    laboratorios = Laboratorio.query.order_by(Laboratorio.nome).all()
+
+    return render_template(
+        "admin_equipamentos.html",
+        usuario=usuario_logado,
+        equipamentos=equipamentos,
+        laboratorios=laboratorios
+    )
+
+
+@app.route("/admin/criar_equipamento", methods=["POST"])
+def criar_equipamento():
+    if "usuario" not in session:
+        return redirect("/login")
+
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not is_admin(usuario_logado):
+        return redirect(url_for('painel_unip'))
+
+    nome = (request.form.get('nome') or '').strip()
+    tipo = (request.form.get('tipo') or '').strip() or None
+    patrimonio = (request.form.get('patrimonio') or '').strip() or None
+    status = (request.form.get('status') or 'ativo').strip()
+    laboratorio_id = request.form.get('laboratorio_id', type=int)
+
+    if not nome or not laboratorio_id:
+        flash("Informe nome e laboratório para cadastrar o equipamento.", "danger")
+        return redirect(url_for('admin_equipamentos'))
+
+    if patrimonio and Equipamento.query.filter_by(patrimonio=patrimonio).first():
+        flash("Já existe um equipamento com este patrimônio.", "danger")
+        return redirect(url_for('admin_equipamentos'))
+
+    novo_equipamento = Equipamento(
+        nome=nome,
+        tipo=tipo,
+        patrimonio=patrimonio,
+        status=status,
+        laboratorio_id=laboratorio_id
+    )
+
+    try:
+        db.session.add(novo_equipamento)
+        db.session.commit()
+        registrar_log("CRIAR_EQUIPAMENTO", f"Equipamento '{nome}' criado")
+        flash("Equipamento criado com sucesso!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao criar equipamento: {e}", "danger")
+
+    return redirect(url_for('admin_equipamentos'))
+
+
+@app.route("/admin/editar_equipamento/<int:id>", methods=["POST"])
+def editar_equipamento(id):
+    if "usuario" not in session:
+        return redirect("/login")
+
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not is_admin(usuario_logado):
+        return redirect(url_for('painel_unip'))
+
+    equipamento = Equipamento.query.get_or_404(id)
+    nome = (request.form.get('nome') or '').strip()
+    tipo = (request.form.get('tipo') or '').strip() or None
+    patrimonio = (request.form.get('patrimonio') or '').strip() or None
+    status = (request.form.get('status') or equipamento.status).strip()
+    laboratorio_id = request.form.get('laboratorio_id', type=int)
+
+    if not nome or not laboratorio_id:
+        flash("Informe nome e laboratório para atualizar o equipamento.", "danger")
+        return redirect(url_for('admin_equipamentos'))
+
+    conflito_patrimonio = None
+    if patrimonio:
+        conflito_patrimonio = Equipamento.query.filter(
+            Equipamento.patrimonio == patrimonio,
+            Equipamento.id != equipamento.id
+        ).first()
+    if conflito_patrimonio:
+        flash("Já existe outro equipamento com este patrimônio.", "danger")
+        return redirect(url_for('admin_equipamentos'))
+
+    equipamento.nome = nome
+    equipamento.tipo = tipo
+    equipamento.patrimonio = patrimonio
+    equipamento.status = status
+    equipamento.laboratorio_id = laboratorio_id
+
+    try:
+        db.session.commit()
+        registrar_log("EDITAR_EQUIPAMENTO", f"Equipamento '{equipamento.nome}' atualizado")
+        flash("Equipamento atualizado com sucesso!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao atualizar equipamento: {e}", "danger")
+
+    return redirect(url_for('admin_equipamentos'))
+
+
+@app.route("/admin/excluir_equipamento/<int:id>", methods=["POST"])
+def excluir_equipamento(id):
+    if "usuario" not in session:
+        return redirect("/login")
+
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not is_admin(usuario_logado):
+        return redirect(url_for('painel_unip'))
+
+    equipamento = Equipamento.query.get_or_404(id)
+    nome = equipamento.nome
+
+    try:
+        db.session.delete(equipamento)
+        db.session.commit()
+        registrar_log("EXCLUIR_EQUIPAMENTO", f"Equipamento '{nome}' removido")
+        flash("Equipamento removido com sucesso!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao remover equipamento: {e}", "danger")
+
+    return redirect(url_for('admin_equipamentos'))
 
 
 @app.route("/admin/bloqueios", methods=["GET", "POST"])

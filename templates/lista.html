@@ -306,6 +306,9 @@
             <a href="{{ url_for('admin_config') }}" class="btn btn-outline-primary btn-sm">
               <i class="bi bi-building me-1"></i> Labs & Turmas
             </a>
+            <a href="{{ url_for('admin_equipamentos') }}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-pc-display-horizontal me-1"></i> Equipamentos
+            </a>
             {% endif %}
             <a href="{{ url_for('relatorio_reservas') }}" class="btn btn-outline-secondary btn-sm">
               <i class="bi bi-bar-chart-line me-1"></i> Relatório
@@ -363,9 +366,12 @@
                     </button>
                     {% endif %}
                     {% if session['usuario'] == reserva.professor or role == 'admin' %}
-                    <a href="/excluir/{{ reserva.id }}" class="btn btn-sm btn-outline-danger border-0" onclick="return confirm('Deseja excluir?')">
+                    <form method="POST" action="/excluir/{{ reserva.id }}" style="display:inline" onsubmit="return confirm('Deseja excluir esta reserva?')">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-sm btn-outline-danger border-0">
                         <i class="bi bi-trash3"></i>
-                    </a>
+                      </button>
+                    </form>
                     {% endif %}
                   </div>
                 </div>
@@ -906,9 +912,20 @@
     let eventosMap = {};
     let selectedCalDate = null;
 
+    function getCalendarRangeParams() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const start = new Date(year, month, 1);
+        const end = new Date(year, month + 1, 1);
+        return new URLSearchParams({
+            start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`,
+            end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`
+        });
+    }
+
     async function carregarEventos() {
         try {
-            const res = await fetch('/api/eventos');
+            const res = await fetch(`/api/eventos?${getCalendarRangeParams().toString()}`);
             const eventos = await res.json();
             eventosMap = {};
             eventos.forEach(ev => {
@@ -1026,6 +1043,7 @@
     function changeMonth(offset) {
         currentDate.setMonth(currentDate.getMonth() + offset);
         fecharDetail();
+        carregarEventos();
     }
 
     document.addEventListener('DOMContentLoaded', carregarEventos);
