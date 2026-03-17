@@ -396,7 +396,9 @@ def login():
 @app.route('/cadastro', methods=['GET', 'POST'])
 def cadastro():
     if request.method == 'POST':
-        role = request.form.get("role")
+        # Whitelist: o cadastro público só permite criar contas de aluno.
+        # Qualquer valor enviado pelo formulário para 'role' é ignorado.
+        role = 'aluno'
         nome = request.form.get("nome") # Captura o nome do formulário
         login = request.form.get("login") 
         email = request.form.get("email")
@@ -412,7 +414,7 @@ def cadastro():
 
         # 3. Instância do Usuário
         novo_usuario = Usuario(
-            nome=nome,  # Agora o campo nome é obrigatório e preenchido
+            nome=nome,
             login=login,
             email=email,
             senha_hash=senha_hash,
@@ -420,41 +422,33 @@ def cadastro():
             ativo=True
         )
 
-        # 4. Lógica de Turmas para Alunos
-        if role == 'aluno':
-            sigla_turma = request.form.get("turma") # Ex: "ADS3A"
-            cod_curso = request.form.get("curso")
-            semestre_val = request.form.get("semestre")
+        # 4. Lógica de Turmas
+        sigla_turma = request.form.get("turma") # Ex: "ADS3A"
+        cod_curso = request.form.get("curso")
+        semestre_val = request.form.get("semestre")
 
-            cursos_nomes = {
-                "ADS": "Análise e Desenvolvimento de Sistemas",
-                "CC": "Ciência da Computação",
-                "DIR": "Direito"
-            }
-            curso_completo = cursos_nomes.get(cod_curso, cod_curso)
+        cursos_nomes = {
+            "ADS": "Análise e Desenvolvimento de Sistemas",
+            "CC": "Ciência da Computação",
+            "DIR": "Direito"
+        }
+        curso_completo = cursos_nomes.get(cod_curso, cod_curso)
 
-            # Busca ou cria a turma para evitar duplicatas
-            turma_existente = Turma.query.filter_by(nome=sigla_turma).first()
-            
-            if not turma_existente:
-                turma_existente = Turma(
-                    nome=sigla_turma, 
-                    curso=curso_completo,
-                    semestre=f"{semestre_val}º Semestre"
-                )
-                db.session.add(turma_existente)
-                db.session.flush() # Gera o ID da turma antes do commit final
+        # Busca ou cria a turma para evitar duplicatas
+        turma_existente = Turma.query.filter_by(nome=sigla_turma).first()
+        
+        if not turma_existente:
+            turma_existente = Turma(
+                nome=sigla_turma, 
+                curso=curso_completo,
+                semestre=f"{semestre_val}º Semestre"
+            )
+            db.session.add(turma_existente)
+            db.session.flush() # Gera o ID da turma antes do commit final
 
-            novo_usuario.turma_id = turma_existente.id
-            novo_usuario.turma = sigla_turma # Mantém a string para compatibilidade
-            novo_usuario.semestre = semestre_val
-
-        else:
-            # Lógica para Professor/Coordenador/Admin
-            cargo = request.form.get("cargo")
-            novo_usuario.cargo = cargo
-            if cargo in ['professor', 'coordenador', 'admin']:
-                novo_usuario.role = cargo
+        novo_usuario.turma_id = turma_existente.id
+        novo_usuario.turma = sigla_turma # Mantém a string para compatibilidade
+        novo_usuario.semestre = semestre_val
 
         # 5. Commit Único (Atômico)
         try:
@@ -769,24 +763,24 @@ def editar(id):
         todos_professores=todos_professores,
     )
 
-@app.route("/excluir/<int:id>")
+@app.route("/excluir/<int:id>", methods=["POST"])
 def excluir(id):
     if "usuario" not in session:
         return redirect(url_for("login"))
-    
+
     usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
     if not usuario_logado:
         session.clear()
         return redirect("/login")
-    
+
     reserva = ReservaLab.query.get(id)
-    if reserva:
-        # Verificar permissões
-        if not is_admin(usuario_logado) and usuario_logado.role != 'coordenador' and reserva.usuario_id != usuario_logado.id:
-            return "Acesso negado", 403
-        db.session.delete(reserva)
-        db.session.commit()
-    
+    if not reserva:
+        return redirect(url_for("painel_unip"))
+    if not is_admin(usuario_logado) and usuario_logado.role != 'coordenador' and reserva.usuario_id != usuario_logado.id:
+        return "Acesso negado", 403
+    db.session.delete(reserva)
+    db.session.commit()
+    registrar_log("EXCLUIR_RESERVA", f"Reserva #{id} excluída")
     return redirect(url_for("painel_unip"))
 
 @app.route("/admin/usuarios")
@@ -1666,7 +1660,7 @@ def admin_logs():
     query_logs = LogAuditoria.query
     if busca_log:
         query_logs = query_logs.filter(
-            db.or_(LogAuditoria.acao.ilike(f"%{busca_log}%"), LogAuditoria.detalhes.ilike(f"%{busca_log}%"))
+            db.or_(LogAuditoria.acao.ilike(f"%{busca_log}%"), LogAuditoria.descricao.ilike(f"%{busca_log}%"))
         )
     if filtro_acao:
         query_logs = query_logs.filter(LogAuditoria.acao == filtro_acao)
