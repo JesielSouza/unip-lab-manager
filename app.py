@@ -763,24 +763,24 @@ def editar(id):
         todos_professores=todos_professores,
     )
 
-@app.route("/excluir/<int:id>")
+@app.route("/excluir/<int:id>", methods=["POST"])
 def excluir(id):
     if "usuario" not in session:
         return redirect(url_for("login"))
-    
+
     usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
     if not usuario_logado:
         session.clear()
         return redirect("/login")
-    
+
     reserva = ReservaLab.query.get(id)
-    if reserva:
-        # Verificar permissões
-        if not is_admin(usuario_logado) and usuario_logado.role != 'coordenador' and reserva.usuario_id != usuario_logado.id:
-            return "Acesso negado", 403
-        db.session.delete(reserva)
-        db.session.commit()
-    
+    if not reserva:
+        return redirect(url_for("painel_unip"))
+    if not is_admin(usuario_logado) and usuario_logado.role != 'coordenador' and reserva.usuario_id != usuario_logado.id:
+        return "Acesso negado", 403
+    db.session.delete(reserva)
+    db.session.commit()
+    registrar_log("EXCLUIR_RESERVA", f"Reserva #{id} excluída")
     return redirect(url_for("painel_unip"))
 
 @app.route("/admin/usuarios")
@@ -1660,7 +1660,7 @@ def admin_logs():
     query_logs = LogAuditoria.query
     if busca_log:
         query_logs = query_logs.filter(
-            db.or_(LogAuditoria.acao.ilike(f"%{busca_log}%"), LogAuditoria.detalhes.ilike(f"%{busca_log}%"))
+            db.or_(LogAuditoria.acao.ilike(f"%{busca_log}%"), LogAuditoria.descricao.ilike(f"%{busca_log}%"))
         )
     if filtro_acao:
         query_logs = query_logs.filter(LogAuditoria.acao == filtro_acao)
