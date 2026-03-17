@@ -110,6 +110,7 @@
     .btn-del:hover { background: #fee2e2; }
     .btn-unip { background: var(--unip-blue); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 0.82rem; padding: 9px 18px; font-family: 'DM Sans', sans-serif; }
     .btn-unip:hover { background: var(--unip-dark); color: white; }
+    .field-hint { font-size: 0.72rem; color: var(--muted); margin-top: 6px; }
 
     /* EMPTY STATE */
     .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
@@ -347,8 +348,9 @@
           </div>
           <div class="row g-2 mb-3">
             <div class="col-md-6">
-              <label class="form-label">Login / RA</label>
-              <input type="text" class="form-control" name="login" required>
+              <label class="form-label" id="modal_login_label">Login / RA</label>
+              <input type="text" class="form-control" name="login" id="modal_login" required>
+              <div class="field-hint" id="modal_login_hint">Use RA numérico para alunos.</div>
             </div>
             <div class="col-md-6">
               <label class="form-label">E-mail</label>
@@ -408,8 +410,31 @@
 <script>
 function toggleModalAluno() {
   var role = document.getElementById('modal_role').value;
+  var loginInput = document.getElementById('modal_login');
+  var loginLabel = document.getElementById('modal_login_label');
+  var loginHint = document.getElementById('modal_login_hint');
+
   document.getElementById('modal_campos_aluno').style.display = role === 'aluno' ? 'block' : 'none';
+
+  if (role === 'aluno') {
+    loginLabel.textContent = 'RA';
+    loginInput.placeholder = 'Apenas números';
+    loginInput.setAttribute('inputmode', 'numeric');
+    loginInput.setAttribute('pattern', '[0-9]+');
+    loginInput.setAttribute('title', 'Para alunos, informe apenas números no RA');
+    loginHint.textContent = 'Para alunos, informe somente números no RA.';
+    return;
+  }
+
+  loginLabel.textContent = 'Login / RA';
+  loginInput.placeholder = '';
+  loginInput.removeAttribute('inputmode');
+  loginInput.removeAttribute('pattern');
+  loginInput.removeAttribute('title');
+  loginHint.textContent = 'Use RA numérico para alunos.';
 }
+
+toggleModalAluno();
 </script>
 
 <!-- ── MODAL CONFIRMAÇÃO EXCLUSÃO ──────────────────────────── -->

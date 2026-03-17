@@ -4,6 +4,7 @@ from flask import Flask, jsonify, render_template, request, redirect, session, u
 from datetime import datetime
 import os
 import bcrypt
+import re
 from flask_migrate import Migrate
 import smtplib
 from datetime import timedelta
@@ -159,6 +160,10 @@ def is_admin(usuario):
 def is_super_admin(usuario):
     """Retorna True apenas para super_admin."""
     return usuario and usuario.role == 'super_admin'
+
+def login_aluno_valido(login):
+    """Aluno deve usar RA com apenas dígitos."""
+    return bool(re.fullmatch(r'\d+', (login or '').strip()))
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── CONTROLE DE SESSÃO ───────────────────────────────────────────────────────
@@ -400,9 +405,13 @@ def cadastro():
         # Qualquer valor enviado pelo formulário para 'role' é ignorado.
         role = 'aluno'
         nome = request.form.get("nome") # Captura o nome do formulário
-        login = request.form.get("login") 
+        login = (request.form.get("login") or "").strip()
         email = request.form.get("email")
         senha = request.form.get("senha")
+
+        if not login_aluno_valido(login):
+            flash("O RA deve conter apenas números.", "danger")
+            return render_template('cadastro.html')
         
         # 1. Verificação de existência
         if Usuario.query.filter_by(login=login).first():
@@ -874,10 +883,14 @@ def criar_usuario():
 
     # 3. Coleta os dados (Adicionamos o 'nome' aqui)
     nome_novo = request.form.get("nome") # <--- CAPTURA O NOME
-    login_novo = request.form.get("login")
+    login_novo = (request.form.get("login") or "").strip()
     email_novo = request.form.get("email")
     role_nova = request.form.get("role")
     senha_plana = request.form.get("senha")
+
+    if role_nova == 'aluno' and not login_aluno_valido(login_novo):
+        flash("Para alunos, o campo login deve conter apenas números no RA.", "danger")
+        return redirect(url_for("admin_usuarios"))
     
     hash_senha = bcrypt.hashpw(senha_plana.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
