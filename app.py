@@ -1,5 +1,5 @@
 from sqlalchemy import or_
-from models import ReservaLab, db, Usuario, Laboratorio, Turma, BloqueioLab, LogAuditoria
+from models import ReservaLab, db, Usuario, Laboratorio, Turma, BloqueioLab, LogAuditoria, Equipamento
 from flask import Flask, jsonify, render_template, request, redirect, session, url_for, flash
 from datetime import datetime
 import os
@@ -1215,6 +1215,140 @@ def criar_turma():
     db.session.commit()
     flash("Turma criada!", "success")
     return redirect(url_for('painel_unip'))
+
+
+@app.route("/admin/equipamentos")
+def admin_equipamentos():
+    if "usuario" not in session:
+        return redirect("/login")
+
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not is_admin(usuario_logado):
+        return redirect(url_for('painel_unip'))
+
+    equipamentos = Equipamento.query.join(Laboratorio).order_by(Laboratorio.nome, Equipamento.nome).all()
+    laboratorios = Laboratorio.query.order_by(Laboratorio.nome).all()
+
+    return render_template(
+        "admin_equipamentos.html",
+        usuario=usuario_logado,
+        equipamentos=equipamentos,
+        laboratorios=laboratorios
+    )
+
+
+@app.route("/admin/criar_equipamento", methods=["POST"])
+def criar_equipamento():
+    if "usuario" not in session:
+        return redirect("/login")
+
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not is_admin(usuario_logado):
+        return redirect(url_for('painel_unip'))
+
+    nome = (request.form.get('nome') or '').strip()
+    tipo = (request.form.get('tipo') or '').strip() or None
+    patrimonio = (request.form.get('patrimonio') or '').strip() or None
+    status = (request.form.get('status') or 'ativo').strip()
+    laboratorio_id = request.form.get('laboratorio_id', type=int)
+
+    if not nome or not laboratorio_id:
+        flash("Informe nome e laboratório para cadastrar o equipamento.", "danger")
+        return redirect(url_for('admin_equipamentos'))
+
+    if patrimonio and Equipamento.query.filter_by(patrimonio=patrimonio).first():
+        flash("Já existe um equipamento com este patrimônio.", "danger")
+        return redirect(url_for('admin_equipamentos'))
+
+    novo_equipamento = Equipamento(
+        nome=nome,
+        tipo=tipo,
+        patrimonio=patrimonio,
+        status=status,
+        laboratorio_id=laboratorio_id
+    )
+
+    try:
+        db.session.add(novo_equipamento)
+        db.session.commit()
+        registrar_log("CRIAR_EQUIPAMENTO", f"Equipamento '{nome}' criado")
+        flash("Equipamento criado com sucesso!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao criar equipamento: {e}", "danger")
+
+    return redirect(url_for('admin_equipamentos'))
+
+
+@app.route("/admin/editar_equipamento/<int:id>", methods=["POST"])
+def editar_equipamento(id):
+    if "usuario" not in session:
+        return redirect("/login")
+
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not is_admin(usuario_logado):
+        return redirect(url_for('painel_unip'))
+
+    equipamento = Equipamento.query.get_or_404(id)
+    nome = (request.form.get('nome') or '').strip()
+    tipo = (request.form.get('tipo') or '').strip() or None
+    patrimonio = (request.form.get('patrimonio') or '').strip() or None
+    status = (request.form.get('status') or equipamento.status).strip()
+    laboratorio_id = request.form.get('laboratorio_id', type=int)
+
+    if not nome or not laboratorio_id:
+        flash("Informe nome e laboratório para atualizar o equipamento.", "danger")
+        return redirect(url_for('admin_equipamentos'))
+
+    conflito_patrimonio = None
+    if patrimonio:
+        conflito_patrimonio = Equipamento.query.filter(
+            Equipamento.patrimonio == patrimonio,
+            Equipamento.id != equipamento.id
+        ).first()
+    if conflito_patrimonio:
+        flash("Já existe outro equipamento com este patrimônio.", "danger")
+        return redirect(url_for('admin_equipamentos'))
+
+    equipamento.nome = nome
+    equipamento.tipo = tipo
+    equipamento.patrimonio = patrimonio
+    equipamento.status = status
+    equipamento.laboratorio_id = laboratorio_id
+
+    try:
+        db.session.commit()
+        registrar_log("EDITAR_EQUIPAMENTO", f"Equipamento '{equipamento.nome}' atualizado")
+        flash("Equipamento atualizado com sucesso!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao atualizar equipamento: {e}", "danger")
+
+    return redirect(url_for('admin_equipamentos'))
+
+
+@app.route("/admin/excluir_equipamento/<int:id>", methods=["POST"])
+def excluir_equipamento(id):
+    if "usuario" not in session:
+        return redirect("/login")
+
+    usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not is_admin(usuario_logado):
+        return redirect(url_for('painel_unip'))
+
+    equipamento = Equipamento.query.get_or_404(id)
+    nome = equipamento.nome
+
+    try:
+        db.session.delete(equipamento)
+        db.session.commit()
+        registrar_log("EXCLUIR_EQUIPAMENTO", f"Equipamento '{nome}' removido")
+        flash("Equipamento removido com sucesso!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao remover equipamento: {e}", "danger")
+
+    return redirect(url_for('admin_equipamentos'))
 
 
 @app.route("/admin/bloqueios", methods=["GET", "POST"])
