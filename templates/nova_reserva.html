@@ -241,10 +241,21 @@ let selectedDate = null;
 // eventosMap: { "YYYY-MM-DD": [ {cor, titulo, periodo, professor, disciplina, turma} ] }
 let eventosMap = {};
 
+function getCalendarRangeParams() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 1);
+    return new URLSearchParams({
+        start: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`,
+        end: `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`
+    });
+}
+
 // Carrega eventos da API e monta o mapa por data
 async function carregarEventos() {
     try {
-        const res = await fetch('/api/eventos');
+        const res = await fetch(`/api/eventos?${getCalendarRangeParams().toString()}`);
         const eventos = await res.json();
         eventosMap = {};
         eventos.forEach(ev => {
@@ -417,7 +428,7 @@ function esconderTooltip() {
 
 function changeMonth(offset) {
     currentDate.setMonth(currentDate.getMonth() + offset);
-    renderCalendar();
+    carregarEventos();
 }
 
 function handleLabChange() {

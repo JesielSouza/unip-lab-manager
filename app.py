@@ -517,11 +517,40 @@ def api_notificacoes():
 @app.route("/api/eventos")
 def api_eventos():
     try:
+        from datetime import date
         from datetime import timedelta
+        inicio_str = (request.args.get("start") or "").strip()
+        fim_str = (request.args.get("end") or "").strip()
+        inicio = None
+        fim = None
+        try:
+            if inicio_str:
+                inicio = date.fromisoformat(inicio_str)
+            if fim_str:
+                fim = date.fromisoformat(fim_str)
+        except ValueError:
+            return jsonify([])
+
+        def parse_data_reserva(valor):
+            if not valor:
+                return None
+            try:
+                if "-" in valor:
+                    return date.fromisoformat(valor)
+                return datetime.strptime(valor, '%d/%m/%Y').date()
+            except ValueError:
+                return None
+
         reservas = ReservaLab.query.filter(ReservaLab.status != 'rejected').all()
         eventos = []
 
         for r in reservas:
+            data_reserva = parse_data_reserva(r.data)
+            if inicio and (not data_reserva or data_reserva < inicio):
+                continue
+            if fim and (not data_reserva or data_reserva >= fim):
+                continue
+
             cor = "#003366"  # Azul UNIP
             if r.status in ['pending', 'pre_approved']:
                 cor = "#ffc107"  # Amarelo
@@ -534,7 +563,7 @@ def api_eventos():
 
             # Converte data de DD/MM/YYYY para YYYY-MM-DD para o FullCalendar
             try:
-                data_iso = datetime.strptime(r.data, '%d/%m/%Y').strftime('%Y-%m-%d')
+                data_iso = data_reserva.isoformat() if data_reserva else datetime.strptime(r.data, '%d/%m/%Y').strftime('%Y-%m-%d')
             except Exception:
                 data_iso = r.data
 
@@ -555,6 +584,10 @@ def api_eventos():
         # Adiciona bloqueios como eventos de fundo vermelhos
         bloqueios = BloqueioLab.query.all()
         for b in bloqueios:
+            if inicio and b.data_fim < inicio:
+                continue
+            if fim and b.data_inicio >= fim:
+                continue
             nome_lab = b.lab_rel.nome if b.lab_rel else "Laboratório"
             # +1 dia pois o FullCalendar usa end exclusivo
             data_fim_exclusivo = (b.data_fim + timedelta(days=1)).strftime('%Y-%m-%d')
