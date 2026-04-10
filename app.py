@@ -17,11 +17,19 @@ from collections import defaultdict
 from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-troque-em-producao")
+
+_secret = os.environ.get("SECRET_KEY")
+if not _secret:
+    if os.environ.get("FLASK_DEBUG", "false").lower() != "true":
+        raise RuntimeError("SECRET_KEY deve ser definida como variável de ambiente em produção.")
+    _secret = "dev-secret-key-apenas-para-desenvolvimento"
+app.secret_key = _secret
+
 csrf = CSRFProtect(app)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=20)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get("FLASK_DEBUG", "false").lower() != "true"
 
 # Armazena token ativo por login (sessão única)
 _sessoes_ativas = {}
@@ -51,27 +59,28 @@ def _ip_bloqueado(ip):
 
 # ── FUNÇÃO DE EMAIL ──────────────────────────────────────────
 def _enviar_email_worker(destinatario, assunto, corpo_html):
-    """Worker interno que envia o email. Roda em thread separada."""
-    mail_user = os.environ.get("MAIL_USER")
-    mail_pass = os.environ.get("MAIL_PASSWORD")
-    if not mail_user or not mail_pass or not destinatario:
-        return
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = assunto
-        msg["From"] = f"UNIP Lab Manager <{mail_user}>"
-        msg["To"] = destinatario
-        msg.attach(MIMEText(corpo_html, "html"))
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(mail_user, mail_pass)
-            server.sendmail(mail_user, destinatario, msg.as_string())
-        print(f"[EMAIL] Enviado para {destinatario}")
-    except Exception as e:
-        import traceback
-        print(f"[EMAIL] Erro ao enviar para {destinatario}: {e}")
-        print(f"[EMAIL] Traceback: {traceback.format_exc()}")
+    """Worker interno que envia o email. Roda em thread separada com contexto isolado."""
+    with app.app_context():
+        mail_user = os.environ.get("MAIL_USER")
+        mail_pass = os.environ.get("MAIL_PASSWORD")
+        if not mail_user or not mail_pass or not destinatario:
+            return
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = assunto
+            msg["From"] = f"UNIP Lab Manager <{mail_user}>"
+            msg["To"] = destinatario
+            msg.attach(MIMEText(corpo_html, "html"))
+            with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
+                server.ehlo()
+                server.starttls()
+                server.login(mail_user, mail_pass)
+                server.sendmail(mail_user, destinatario, msg.as_string())
+            print(f"[EMAIL] Enviado para {destinatario}")
+        except Exception as e:
+            import traceback
+            print(f"[EMAIL] Erro ao enviar para {destinatario}: {e}")
+            print(f"[EMAIL] Traceback: {traceback.format_exc()}")
 
 def enviar_email(destinatario, assunto, corpo_html):
     """Envia email em thread separada para não bloquear a requisição."""
@@ -92,7 +101,6 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 migrate = Migrate(app, db)
 
 # Inicia o banco com o app
-from models import db, Usuario
 db.init_app(app)
 
 def inicializar_unidade():
@@ -152,6 +160,14 @@ def inicializar_unidade():
         db.session.rollback()
         print(f"❌ Erro na inicialização: {e}")
 
+# ── SECURITY HEADERS ─────────────────────────────────────────────────────────
+@app.after_request
+def set_security_headers(response):
+    if os.environ.get("FLASK_DEBUG", "false").lower() != "true":
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
+# ─────────────────────────────────────────────────────────────────────────────
+
 # ── HELPERS DE ROLE ──────────────────────────────────────────────────────────
 def is_admin(usuario):
     """Retorna True para admin e super_admin."""
@@ -166,9 +182,13 @@ def login_aluno_valido(login):
     return bool(re.fullmatch(r'\d+', (login or '').strip()))
 
 def senha_minima_valida(senha, tamanho_minimo=6):
-    """Garante validaÃ§Ã£o server-side de senha mÃ­nima."""
+    """Garante validação server-side de senha mínima."""
     senha = (senha or "").strip()
     return len(senha) >= tamanho_minimo
+
+def _escape_like(s):
+    """Escapa wildcards para uso seguro em cláusulas LIKE/ilike."""
+    return s.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── CONTROLE DE SESSÃO ───────────────────────────────────────────────────────
@@ -258,9 +278,9 @@ def relatorio_reservas():
 
     query = ReservaLab.query
     if turma:
-        query = query.join(ReservaLab.turma_rel).filter(Turma.nome.ilike(f"%{turma}%"))
+        query = query.join(ReservaLab.turma_rel).filter(Turma.nome.ilike(f"%{_escape_like(turma)}%", escape="\\"))
     if disciplina:
-        query = query.filter(ReservaLab.disciplina.ilike(f"%{disciplina}%"))
+        query = query.filter(ReservaLab.disciplina.ilike(f"%{_escape_like(disciplina)}%", escape="\\"))
     if status:
         query = query.filter(ReservaLab.status == status)
 
@@ -309,9 +329,9 @@ def exportar_csv():
 
     query = ReservaLab.query
     if turma:
-        query = query.join(ReservaLab.turma_rel).filter(Turma.nome.ilike(f"%{turma}%"))
+        query = query.join(ReservaLab.turma_rel).filter(Turma.nome.ilike(f"%{_escape_like(turma)}%", escape="\\"))
     if disciplina:
-        query = query.filter(ReservaLab.disciplina.ilike(f"%{disciplina}%"))
+        query = query.filter(ReservaLab.disciplina.ilike(f"%{_escape_like(disciplina)}%", escape="\\"))
     if status:
         query = query.filter(ReservaLab.status == status)
     reservas = query.order_by(ReservaLab.data.desc()).all()
@@ -370,13 +390,12 @@ def login():
         
         usuario = Usuario.query.filter_by(login=login_form).first()
         
-        if not usuario:
+        if not usuario or not usuario.ativo:
             _tentativas_login[ip].append(time.time())
-            flash("Usuário não encontrado", "danger")
-            return render_template("login.html")
-
-        if not usuario.ativo:
-            flash("Conta desativada. Entre em contato com o administrador.", "danger")
+            if usuario and not usuario.ativo:
+                flash("Conta desativada. Entre em contato com o administrador.", "danger")
+            else:
+                flash("Usuário ou senha incorretos.", "danger")
             return render_template("login.html")
 
         if bcrypt.checkpw(senha_form.encode(), usuario.senha_hash.encode()):
@@ -395,7 +414,7 @@ def login():
             _tentativas_login[ip].append(time.time())
             tentativas_restantes = LIMITE_TENTATIVAS - len(_tentativas_login[ip])
             if tentativas_restantes > 0:
-                flash(f"Senha incorreta. {tentativas_restantes} tentativa(s) restante(s).", "danger")
+                flash(f"Usuário ou senha incorretos. {tentativas_restantes} tentativa(s) restante(s).", "danger")
             else:
                 flash("Muitas tentativas incorretas. Acesso bloqueado por 15 minutos.", "danger")
             return render_template("login.html")
@@ -475,7 +494,7 @@ def cadastro():
             return redirect(url_for("login"))
         except Exception as e:
             db.session.rollback()
-            flash(f"Erro ao salvar: {str(e)}", "danger")
+            flash("Erro ao salvar. Tente novamente.", "danger")
 
     return render_template('cadastro.html')
 
@@ -516,6 +535,11 @@ def api_notificacoes():
 
 @app.route("/api/eventos")
 def api_eventos():
+    if "usuario" not in session:
+        return jsonify([]), 401
+    _u = Usuario.query.filter_by(login=session["usuario"]).first()
+    if not _u:
+        return jsonify([]), 401
     try:
         from sqlalchemy import case, func
         from datetime import date
@@ -691,12 +715,13 @@ def nova_reserva():
             todos_professores = Usuario.query.filter(Usuario.role.in_(["professor", "coordenador"])).all()
             return render_template("nova_reserva.html", laboratorios=laboratorios, turmas=turmas, usuario=usuario_logado, todos_professores=todos_professores)
 
-        # TRAVA 3: Conflito de Horário
+        # TRAVA 3: Conflito de Horário (ignora reservas rejeitadas)
         conflito = ReservaLab.query.filter(
             ReservaLab.laboratorio_id == lab_id,
             ReservaLab.data == data_selecionada.strftime('%d/%m/%Y'),
             ReservaLab.horario_inicio < h_fim,
-            ReservaLab.horario_fim > h_inicio
+            ReservaLab.horario_fim > h_inicio,
+            ReservaLab.status.in_(['pending', 'pre_approved', 'approved'])
         ).first()
 
         if conflito:
@@ -736,7 +761,7 @@ def nova_reserva():
             return redirect(url_for('painel_unip'))
         except Exception as e:
             db.session.rollback()
-            flash(f"Erro ao salvar reserva: {str(e)}", "danger")
+            flash("Erro ao salvar reserva. Tente novamente.", "danger")
 
     # Dados para carregar os selects do HTML — só ativos/ativas
     laboratorios = Laboratorio.query.filter_by(status='ativo').all()
@@ -756,6 +781,14 @@ def editar(id):
     
     reserva = ReservaLab.query.get_or_404(id)
     usuario_logado = Usuario.query.filter_by(login=session["usuario"]).first()
+
+    # Verificação de autorização: apenas criador da reserva, coordenador da turma ou admin
+    if not is_admin(usuario_logado):
+        turmas_coord = [t.id for t in Turma.query.filter_by(coordenador_id=usuario_logado.id).all()] if usuario_logado.role == 'coordenador' else []
+        pode_editar = (reserva.usuario_id == usuario_logado.id or
+                       (usuario_logado.role == 'coordenador' and reserva.turma_id in turmas_coord))
+        if not pode_editar:
+            return "Acesso negado", 403
 
     if request.method == "POST":
         # 1. Captura os novos dados do formulário (reaproveita campos de nova_reserva)
@@ -867,6 +900,9 @@ def admin_usuarios():
 
     busca       = request.args.get('q', '').strip()
     filtro_role = request.args.get('role', '').strip()
+    _ROLES_VALIDOS = {'aluno', 'professor', 'coordenador', 'admin', 'super_admin'}
+    if filtro_role not in _ROLES_VALIDOS:
+        filtro_role = ''
     page        = request.args.get('page', 1, type=int)
     PER_PAGE    = 20
 
@@ -874,7 +910,7 @@ def admin_usuarios():
     base_q = Usuario.query if is_super_admin(usuario) else Usuario.query.filter(Usuario.role != 'super_admin')
     if busca:
         base_q = base_q.filter(
-            db.or_(Usuario.nome.ilike(f'%{busca}%'), Usuario.login.ilike(f'%{busca}%'), Usuario.email.ilike(f'%{busca}%'))
+            db.or_(Usuario.nome.ilike(f'%{_escape_like(busca)}%', escape='\\'), Usuario.login.ilike(f'%{_escape_like(busca)}%', escape='\\'), Usuario.email.ilike(f'%{_escape_like(busca)}%', escape='\\'))
         )
 
     # Contadores por role (para os cards) — sem filtro de role
@@ -984,7 +1020,7 @@ def criar_usuario():
         flash("Usuário criado com sucesso!", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f"Erro ao criar usuário: {e}", "danger")
+        flash("Erro ao criar usuário. Verifique os dados e tente novamente.", "danger")
 
     return redirect(url_for("admin_usuarios"))
 
@@ -1043,7 +1079,7 @@ def editar_usuario(id):
         flash("Usuário atualizado com sucesso!", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f"Erro ao salvar: {e}", "danger")
+        flash("Erro ao salvar. Tente novamente.", "danger")
 
     return redirect(url_for("admin_usuarios"))
 
@@ -1057,6 +1093,10 @@ def excluir_usuario(id):
         return "Acesso negado", 403
 
     user = Usuario.query.get(id)
+    # Impede auto-exclusão
+    if user and user.id == usuario_logado.id:
+        flash("Você não pode excluir sua própria conta.", "danger")
+        return redirect(url_for('admin_usuarios'))
     # super_admin nunca pode ser deletado
     if user and user.role == 'super_admin':
         flash("O super admin não pode ser removido.", "danger")
@@ -1114,7 +1154,7 @@ def criar_laboratorio():
     flash("Laboratório criado!", "success")
     return redirect(url_for('painel_unip'))
 
-@app.route("/admin/excluir_laboratorio/<int:id>")
+@app.route("/admin/excluir_laboratorio/<int:id>", methods=["POST"])
 def excluir_laboratorio(id):
     if "usuario" not in session:
         return redirect("/login")
@@ -1124,10 +1164,19 @@ def excluir_laboratorio(id):
 
     lab = Laboratorio.query.get(id)
     if lab:
-        db.session.delete(lab)
-        db.session.commit()
-        flash("Laboratório removido!", "success")
-    return redirect(url_for('painel_unip'))
+        qtd_equip = Equipamento.query.filter_by(laboratorio_id=lab.id).count()
+        if qtd_equip > 0:
+            flash(f"Não é possível excluir: laboratório possui {qtd_equip} equipamento(s). Remova-os primeiro.", "danger")
+            return redirect(url_for('admin_config'))
+        BloqueioLab.query.filter_by(laboratorio_id=lab.id).delete(synchronize_session=False)
+        try:
+            db.session.delete(lab)
+            db.session.commit()
+            flash("Laboratório removido!", "success")
+        except Exception:
+            db.session.rollback()
+            flash("Erro ao remover laboratório.", "danger")
+    return redirect(url_for('admin_config'))
 
 @app.route("/admin/config")
 def admin_config():
@@ -1275,7 +1324,7 @@ def criar_equipamento():
         flash("Equipamento criado com sucesso!", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f"Erro ao criar equipamento: {e}", "danger")
+        flash("Erro ao criar equipamento. Tente novamente.", "danger")
 
     return redirect(url_for('admin_equipamentos'))
 
@@ -1322,7 +1371,7 @@ def editar_equipamento(id):
         flash("Equipamento atualizado com sucesso!", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f"Erro ao atualizar equipamento: {e}", "danger")
+        flash("Erro ao atualizar equipamento. Tente novamente.", "danger")
 
     return redirect(url_for('admin_equipamentos'))
 
@@ -1346,7 +1395,7 @@ def excluir_equipamento(id):
         flash("Equipamento removido com sucesso!", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f"Erro ao remover equipamento: {e}", "danger")
+        flash("Erro ao remover equipamento. Tente novamente.", "danger")
 
     return redirect(url_for('admin_equipamentos'))
 
@@ -1371,6 +1420,10 @@ def gerenciar_bloqueios():
         inicio = datetime.strptime(inicio_str, '%Y-%m-%d').date()
         fim = datetime.strptime(fim_str, '%Y-%m-%d').date()
 
+        if fim < inicio:
+            flash("Data de fim não pode ser anterior à data de início.", "danger")
+            return redirect(url_for('gerenciar_bloqueios'))
+
         novo_bloqueio = BloqueioLab(
             laboratorio_id=int(lab_id),
             data_inicio=inicio,
@@ -1389,7 +1442,7 @@ def gerenciar_bloqueios():
                            bloqueios=bloqueios, 
                            laboratorios=lista_laboratorios) # Passa para o HTML
 
-@app.route("/admin/excluir_bloqueio/<int:id>")
+@app.route("/admin/excluir_bloqueio/<int:id>", methods=["POST"])
 def excluir_bloqueio(id):
     if "usuario" not in session: return redirect("/login")
     
@@ -1530,6 +1583,11 @@ def aprovar_reserva(id):
                 </div>"""
             )
     elif usuario.role == 'coordenador':
+        # Coordenador só pode aprovar reservas das suas próprias turmas
+        turmas_do_coord = [t.id for t in Turma.query.filter_by(coordenador_id=usuario.id).all()]
+        if reserva.turma_id not in turmas_do_coord:
+            flash("Você não tem permissão para aprovar reservas desta turma.", "danger")
+            return redirect(url_for("coordenador_reservas"))
         if reserva.status == 'pending':
             # Revalidar conflito antes de pré-aprovar
             conflito = ReservaLab.query.filter(
@@ -1879,7 +1937,7 @@ def admin_logs():
     query_logs = LogAuditoria.query
     if busca_log:
         query_logs = query_logs.filter(
-            db.or_(LogAuditoria.acao.ilike(f"%{busca_log}%"), LogAuditoria.descricao.ilike(f"%{busca_log}%"))
+            db.or_(LogAuditoria.acao.ilike(f"%{_escape_like(busca_log)}%", escape="\\"), LogAuditoria.descricao.ilike(f"%{_escape_like(busca_log)}%", escape="\\"))
         )
     if filtro_acao:
         query_logs = query_logs.filter(LogAuditoria.acao == filtro_acao)
