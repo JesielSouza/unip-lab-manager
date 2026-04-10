@@ -139,7 +139,7 @@
                         <h4 class="fw-bold mb-0 text-dark">{{ usuario.nome }}</h4>
                         <div class="d-flex flex-wrap gap-3 mt-1">
                             <span class="text-secondary small">RA: <strong>{{ usuario.login }}</strong></span>
-                            <span class="text-secondary small">Turma: <strong>{{ usuario.turma }}</strong></span>
+                            <span class="text-secondary small">Turma: <strong>{{ usuario.turma or (usuario.turma_rel.nome if usuario.turma_rel else 'N/A') }}</strong></span>
                         </div>
                     </div>
                 </div>

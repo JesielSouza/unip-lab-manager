@@ -2102,7 +2102,9 @@ def erro_405(e):
 
 # Inicializa o banco ao subir com gunicorn ou diretamente
 with app.app_context():
-    db.create_all()
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url or "sqlite" in db_url:
+        db.create_all()  # apenas dev local com SQLite
     inicializar_unidade()
 
 if __name__ == "__main__":
