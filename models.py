@@ -48,20 +48,20 @@ class ReservaLab(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     
     # Agora usamos chaves estrangeiras para garantir dados limpos
-    laboratorio_id = db.Column(db.Integer, db.ForeignKey('laboratorio.id'), nullable=False)
-    turma_id = db.Column(db.Integer, db.ForeignKey('turma.id'), nullable=False)
-    
+    laboratorio_id = db.Column(db.Integer, db.ForeignKey('laboratorio.id'), nullable=False, index=True)
+    turma_id = db.Column(db.Integer, db.ForeignKey('turma.id'), nullable=False, index=True)
+
     professor = db.Column(db.String(100))
     disciplina = db.Column(db.String(100))
-    data = db.Column(db.String(10), nullable=False)
-    
+    data = db.Column(db.String(10), nullable=False, index=True)
+
     # Novos campos de horário real (Ponto 3 e 5)
     horario_inicio = db.Column(db.String(5), nullable=False) # Ex: "19:30"
     horario_fim = db.Column(db.String(5), nullable=False)    # Ex: "21:30"
-    
+
     # Status padronizado (pending, pre_approved, approved, rejected, blocked)
-    status = db.Column(db.String(20), default='pending')
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'))
+    status = db.Column(db.String(20), default='pending', index=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), index=True)
 
     # Relacionamentos para facilitar o uso no HTML
     lab = db.relationship('Laboratorio', backref='reservas')
