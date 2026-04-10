@@ -77,6 +77,15 @@ class BloqueioLab(db.Model):
     # Relacionamento com Laboratorio para uso em templates (b.lab_rel.nome)
     lab_rel = db.relationship('Laboratorio', backref='bloqueios')
 
+class Equipamento(db.Model):
+    id             = db.Column(db.Integer, primary_key=True)
+    nome           = db.Column(db.String(100), nullable=False)
+    tipo           = db.Column(db.String(50), nullable=True)
+    patrimonio     = db.Column(db.String(50), unique=True, nullable=True)
+    status         = db.Column(db.String(20), default='ativo', nullable=False)  # ativo | manutencao | indisponivel
+    laboratorio_id = db.Column(db.Integer, db.ForeignKey('laboratorio.id'), nullable=False)
+    laboratorio    = db.relationship('Laboratorio', backref='equipamentos')
+
 class LogAuditoria(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
