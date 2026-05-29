@@ -1,15 +1,13 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <title>Logs de Auditoria | UNIP Lab Manager</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-  <style>
+{% extends "base.html" %}
+
+{% set role = usuario.role %}
+
+{% block title %}Logs de Auditoria | UNIP Lab Manager{% endblock %}
+
+{% block extra_css %}
+<style>
     :root { --unip-blue: #003366; --unip-dark: #002244; --unip-gold: #f5b915; }
     body { background: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .navbar-unip { background: linear-gradient(90deg, var(--unip-dark) 0%, var(--unip-blue) 100%); border-bottom: 4px solid var(--unip-gold); }
     .page-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 1.25rem 0; margin-bottom: 1.5rem; }
     .page-header h4 { font-weight: 800; color: var(--unip-blue); margin: 0; }
     .page-header .subtitle { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
@@ -39,15 +37,11 @@
     .filter-bar { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
     .empty-state { text-align: center; padding: 3rem; color: #94a3b8; }
     .empty-state i { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
-  </style>
-</head>
-<body>
-<nav class="navbar navbar-dark navbar-unip shadow mb-0 py-2">
-  <div class="container d-flex justify-content-between align-items-center">
-    <a class="navbar-brand fw-bold" href="{{ url_for('painel_unip') }}"><i class="bi bi-cpu-fill me-2"></i> UNIP LAB MANAGER</a>
-    <a href="{{ url_for('painel_unip') }}" class="btn btn-sm btn-outline-light border-0 fw-bold"><i class="bi bi-arrow-left me-1"></i> Painel</a>
-  </div>
-</nav>
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "partials/_navbar.html" %}
 
 <div class="page-header">
   <div class="container d-flex justify-content-between align-items-center">
@@ -63,6 +57,8 @@
 
 <div class="container pb-5">
 
+  {% include "partials/_flash.html" %}
+
   <!-- Filtro client-side -->
   <div class="filter-bar d-flex gap-3 align-items-center flex-wrap">
     <div>
@@ -73,17 +69,9 @@
       <label class="form-label" style="font-size:0.7rem;font-weight:800;color:#64748b;text-transform:uppercase;">Ação</label>
       <select id="filtro_acao" class="form-select form-select-sm" onchange="filtrarLogs()" style="min-width:180px;">
         <option value="">Todas</option>
-        <option value="LOGIN">Login</option>
-        <option value="LOGOUT">Logout</option>
-        <option value="CRIAR_USUARIO">Criar Usuário</option>
-        <option value="EDITAR_USUARIO">Editar Usuário</option>
-        <option value="EXCLUIR_USUARIO">Excluir Usuário</option>
-        <option value="CRIAR_RESERVA">Criar Reserva</option>
-        <option value="APROVAR_RESERVA">Aprovar Reserva</option>
-        <option value="PRE_APROVAR_RESERVA">Pré-Aprovar</option>
-        <option value="REJEITAR_RESERVA">Rejeitar Reserva</option>
-        <option value="CRIAR_BLOQUEIO">Criar Bloqueio</option>
-        <option value="EXCLUIR_BLOQUEIO">Excluir Bloqueio</option>
+        {% for acao in acoes_disponiveis %}
+          <option value="{{ acao }}">{{ acao.replace('_', ' ').capitalize() }}</option>
+        {% endfor %}
       </select>
     </div>
     <div class="ms-auto align-self-end">
@@ -164,7 +152,9 @@
     {% endif %}
   </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 function filtrarLogs() {
@@ -187,5 +177,4 @@ function limparFiltros() {
   filtrarLogs();
 }
 </script>
-</body>
-</html>
+{% endblock %}
