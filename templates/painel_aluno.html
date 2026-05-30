@@ -1,132 +1,102 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>UNIP Lab Manager | Painel do Aluno</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        :root { 
-            --unip-blue: #003366; 
-            --unip-gold: #f5b915; 
-            --bg-gray: #f8fafc; 
-        }
-        
-        body { background-color: var(--bg-gray); font-family: 'Inter', 'Segoe UI', sans-serif; }
-        
-        .navbar-unip { 
-            background: linear-gradient(90deg, #002244 0%, var(--unip-blue) 100%); 
-            border-bottom: 4px solid var(--unip-gold);
-            padding: 0.8rem 0;
-            position: relative;
-            z-index: 1050; /* Garante que a navbar fique sempre à frente */
-        }
+{% extends "base.html" %}
 
-        /* Card de perfil ajustado para NÃO subir na navbar */
-        .profile-card {
-            background: white;
-            border-radius: 16px;
-            border: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            margin-top: 20px; /* Agora com margem positiva */
-            border-bottom: 4px solid #e2e8f0;
-        }
+{% set role = usuario.role %}
 
-        .section-title { 
-            font-size: 0.85rem;
-            font-weight: 800; 
-            color: #64748b; 
-            text-transform: uppercase; 
-            letter-spacing: 1.2px;
-            margin: 1.5rem 0;
-            display: flex;
-            align-items: center;
-        }
-        .section-title i { color: var(--unip-blue); margin-right: 8px; }
+{% block title %}UNIP Lab Manager | Painel do Aluno{% endblock %}
 
-        .reserva-item {
-            background: white;
-            border: none;
-            border-radius: 16px;
-            transition: transform 0.2s;
-            position: relative;
-            border-left: 6px solid var(--unip-blue);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-        }
-
-        .date-container {
-            background: #f1f5f9;
-            border-radius: 12px;
-            padding: 10px;
-            min-width: 75px;
-            text-align: center;
-            border: 1px solid #e2e8f0;
-        }
-        .date-day { font-size: 1.4rem; font-weight: 800; color: var(--unip-blue); line-height: 1; }
-        .date-month { font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
-
-        .lab-tag {
-            background: #fff9db;
-            color: #856404;
-            font-weight: 700;
-            font-size: 0.75rem;
-            padding: 4px 12px;
-            border-radius: 8px;
-        }
-
-        .time-box {
-            background: var(--unip-blue);
-            color: white;
-            padding: 6px 14px;
-            border-radius: 10px;
-            font-weight: 600;
-        }
+{% block extra_css %}
+<style>
+    :root { 
+        --unip-blue: #003366; 
+        --unip-gold: #f5b915; 
+        --bg-gray: #f8fafc; 
+    }
     
+    body { background-color: var(--bg-gray); font-family: 'Inter', 'Segoe UI', sans-serif; }
+    
+    /* Card de perfil ajustado para NÃO subir na navbar */
+    .profile-card {
+        background: white;
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        margin-top: 20px;
+        border-bottom: 4px solid #e2e8f0;
+    }
+
+    .section-title { 
+        font-size: 0.85rem;
+        font-weight: 800; 
+        color: #64748b; 
+        text-transform: uppercase; 
+        letter-spacing: 1.2px;
+        margin: 1.5rem 0;
+        display: flex;
+        align-items: center;
+    }
+    .section-title i { color: var(--unip-blue); margin-right: 8px; }
+
+    .reserva-item {
+        background: white;
+        border: none;
+        border-radius: 16px;
+        transition: transform 0.2s;
+        position: relative;
+        border-left: 6px solid var(--unip-blue);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    }
+
+    .date-container {
+        background: #f1f5f9;
+        border-radius: 12px;
+        padding: 10px;
+        min-width: 75px;
+        text-align: center;
+        border: 1px solid #e2e8f0;
+    }
+    .date-day { font-size: 1.4rem; font-weight: 800; color: var(--unip-blue); line-height: 1; }
+    .date-month { font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+
+    .lab-tag {
+        background: #fff9db;
+        color: #856404;
+        font-weight: 700;
+        font-size: 0.75rem;
+        padding: 4px 12px;
+        border-radius: 8px;
+    }
+
+    .time-box {
+        background: var(--unip-blue);
+        color: white;
+        padding: 6px 14px;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+
     /* ── MOBILE RESPONSIVO ─────────────────────────────────── */
     @media (max-width: 768px) {
       .container { padding-left: 12px; padding-right: 12px; }
-      .page-header { padding: 1rem 0; }
       .page-header h4 { font-size: 1.1rem; }
       .page-header .d-flex { flex-wrap: wrap; gap: 8px; }
-      .table-responsive { -webkit-overflow-scrolling: touch; }
-      .table { font-size: 0.78rem; }
-      .table thead th, .table tbody td { padding: 8px 10px; }
-      .results-card { border-radius: 12px; }
-      .filter-bar, .filter-card { flex-direction: column; }
-      .filter-bar input, .filter-bar select { min-width: unset !important; width: 100%; }
-      .btn { font-size: 0.8rem; }
-      .d-flex.gap-3 { gap: 8px !important; }
-      .d-flex.gap-2 { gap: 6px !important; }
-      .row.g-4 > [class*='col-'] { margin-bottom: 0; }
     }
     @media (max-width: 480px) {
       body { font-size: 0.9rem; }
-      .navbar-brand { font-size: 0.85rem; }
       h4 { font-size: 1rem !important; }
       .form-control, .form-select, input, select, textarea {
-        font-size: 16px !important; /* evita zoom no iOS */
+        font-size: 16px !important;
         border-radius: 10px;
       }
-      .btn-unip, .btn-login, .btn-salvar, .btn-filtrar, .btn-interditar {
-        width: 100%;
-        margin-bottom: 6px;
-      }
     }
-  </style>
-</head>
-<body>
+</style>
+{% endblock %}
 
-<nav class="navbar navbar-dark navbar-unip shadow">
-    <div class="container d-flex justify-content-between">
-        <span class="navbar-brand fw-bold"><i class="bi bi-cpu-fill me-2"></i> UNIP LAB MANAGER</span>
-        <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-light fw-bold border-0">
-            SAIR <i class="bi bi-box-arrow-right ms-1"></i>
-        </a>
-    </div>
-</nav>
+{% block content %}
+{% include "partials/_navbar.html" %}
 
 <div class="container pb-5">
+    {% include "partials/_flash.html" %}
+
     <div class="row">
         <div class="col-12">
             <div class="card profile-card p-4">
@@ -202,7 +172,8 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+{% endblock %}
