@@ -1,118 +1,239 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>UNIP Lab Manager | Nova Reserva</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        :root { 
-            --unip-blue: #003366; 
-            --unip-gold: #f5b915; 
-            --bg-gray: #f8fafc; 
-            --text-main: #1e293b;
-        }
-        
-        body { background-color: var(--bg-gray); font-family: 'Inter', 'Segoe UI', sans-serif; color: var(--text-main); }
-        
-        /* Navbar Padrão */
-        .navbar-unip { 
-            background: linear-gradient(90deg, #002244 0%, var(--unip-blue) 100%); 
-            border-bottom: 4px solid var(--unip-gold);
-            padding: 0.8rem 0;
-            z-index: 1050;
-        }
+{% extends "base.html" %}
 
-        /* Títulos de Seção */
-        .section-title { 
-            font-size: 0.8rem;
-            font-weight: 800; 
-            color: #64748b; 
-            text-transform: uppercase; 
-            letter-spacing: 1.2px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            border-left: 4px solid var(--unip-gold);
-            padding-left: 12px;
-        }
+{% set role = usuario.role %}
 
-        /* Container do Calendário */
-        .calendar-container { 
-            background: white; 
-            border-radius: 20px; 
-            padding: 15px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
-            border: 1px solid #e2e8f0;
-            min-height: 400px;
-        }
+{% block title %}UNIP Lab Manager | Nova Reserva{% endblock %}
 
-        /* Estilização dos Inputs */
-        .card-reserva { border: none; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-        
-        .form-label { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
-        
-        .form-control, .form-select { 
-            border: 1px solid #e2e8f0; 
-            padding: 12px 16px; 
-            border-radius: 12px; 
-            font-size: 0.95rem; 
-            transition: all 0.2s;
-        }
-        .form-control:focus, .form-select:focus { 
-            border-color: var(--unip-blue); 
-            box-shadow: 0 0 0 4px rgba(0,51,102,0.05); 
-        }
+{% block extra_css %}
+<style>
+    :root { 
+        --unip-blue: #003366; 
+        --unip-gold: #f5b915; 
+        --bg-gray: #f8fafc; 
+        --text-main: #1e293b;
+    }
+    
+    body { background-color: var(--bg-gray); font-family: 'Inter', 'Segoe UI', sans-serif; color: var(--text-main); }
+    
+    /* Títulos de Seção */
+    .section-title { 
+        font-size: 0.8rem;
+        font-weight: 800; 
+        color: #64748b; 
+        text-transform: uppercase; 
+        letter-spacing: 1.2px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        border-left: 4px solid var(--unip-gold);
+        padding-left: 12px;
+    }
 
-        /* Botão Unip */
-        .btn-unip { 
-            background: var(--unip-blue); 
-            color: white; 
-            font-weight: 700; 
-            border-radius: 12px; 
-            padding: 14px 24px; 
-            border: none;
-            transition: all 0.3s;
-        }
-        .btn-unip:hover { background: #002244; transform: translateY(-2px); color: white; box-shadow: 0 8px 15px rgba(0,51,102,0.2); }
+    /* Container do Calendário */
+    .calendar-container { 
+        background: white; 
+        border-radius: 20px; 
+        padding: 15px; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+        border: 1px solid #e2e8f0;
+        min-height: 400px;
+        position: relative;
+    }
 
-        .lab2-warning { 
-            display: none; 
-            background-color: #fff9db; 
-            border: 1px solid #ffe066; 
-            color: #856404; 
-            padding: 15px; 
-            border-radius: 12px; 
-            margin-top: 15px; 
-            font-size: 0.8rem; 
-        }
-    </style>
-</head>
-<body>
+    /* Estilização dos Inputs */
+    .card-reserva { border: none; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+    
+    .form-label { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
+    
+    .form-control, .form-select { 
+        border: 1px solid #e2e8f0; 
+        padding: 12px 16px; 
+        border-radius: 12px; 
+        font-size: 0.95rem; 
+        transition: all 0.2s;
+    }
+    .form-control:focus, .form-select:focus { 
+        border-color: var(--unip-blue); 
+        box-shadow: 0 0 0 4px rgba(0,51,102,0.05); 
+    }
 
-<nav class="navbar navbar-dark navbar-unip shadow mb-4">
-    <div class="container d-flex justify-content-between">
-        <a class="navbar-brand fw-bold" href="{{ url_for('painel_unip') }}">
-            <i class="bi bi-cpu-fill me-2"></i> UNIP LAB MANAGER
-        </a>
-        <div class="text-white small d-none d-md-block">
-            <i class="bi bi-person-circle me-1"></i> {{ usuario.nome }}
-        </div>
-    </div>
-</nav>
+    /* Botão Unip */
+    .btn-unip { 
+        background: var(--unip-blue); 
+        color: white; 
+        font-weight: 700; 
+        border-radius: 12px; 
+        padding: 14px 24px; 
+        border: none;
+        transition: all 0.3s;
+    }
+    .btn-unip:hover { background: #002244; transform: translateY(-2px); color: white; box-shadow: 0 8px 15px rgba(0,51,102,0.2); }
+
+    .lab2-warning { 
+        display: none; 
+        background-color: #fff9db; 
+        border: 1px solid #ffe066; 
+        color: #856404; 
+        padding: 15px; 
+        border-radius: 12px; 
+        margin-top: 15px; 
+        font-size: 0.8rem; 
+    }
+
+    /* ── CALENDÁRIO CUSTOMIZADO ─────────────────────────── */
+    .cal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    .cal-title {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #003366;
+        letter-spacing: 0.5px;
+    }
+    .cal-nav {
+        background: none;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        width: 28px; height: 28px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        color: #003366;
+        font-size: 0.75rem;
+        transition: 0.2s;
+    }
+    .cal-nav:hover { background: #003366; color: white; border-color: #003366; }
+
+    .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+    }
+    .cal-day-name {
+        text-align: center;
+        font-size: 0.62rem;
+        font-weight: 800;
+        color: #94a3b8;
+        text-transform: uppercase;
+        padding: 4px 0;
+    }
+    .cal-day {
+        aspect-ratio: 1/1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: 0.15s;
+        position: relative;
+        padding: 2px;
+        gap: 2px;
+    }
+    .cal-day:not(.cal-empty):hover { background: #f1f5f9; }
+    .cal-empty { cursor: default; }
+    .cal-num {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #475569;
+        line-height: 1;
+    }
+    .cal-hoje { background: #fff9db; }
+    .cal-hoje .cal-num { color: #b45309; font-weight: 800; }
+    .cal-selected { background: #003366 !important; }
+    .cal-selected .cal-num { color: white !important; }
+    .cal-selected .cal-dot { opacity: 0.7; }
+
+    .cal-dots {
+        display: flex;
+        gap: 2px;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .cal-dot {
+        width: 5px; height: 5px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+    .cal-dot-more {
+        font-size: 0.5rem;
+        font-weight: 800;
+        color: #64748b;
+        line-height: 1;
+    }
+
+    /* Tooltip */
+    .cal-tooltip {
+        position: absolute;
+        z-index: 999;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 8px;
+        min-width: 190px;
+        max-width: 220px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        pointer-events: none;
+    }
+    .tip-date {
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: #003366;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+    }
+    .tip-ev {
+        padding: 5px 6px;
+        border-radius: 6px;
+        background: #f8fafc;
+        margin-bottom: 4px;
+        padding-left: 8px;
+    }
+    .tip-titulo {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+    .tip-info {
+        font-size: 0.65rem;
+        color: #64748b;
+        margin-top: 1px;
+    }
+    .tip-info i { margin-right: 3px; }
+
+    /* Legenda */
+    .cal-legend {
+        display: flex;
+        gap: 10px;
+        font-size: 0.65rem;
+        color: #64748b;
+        flex-wrap: wrap;
+    }
+    .leg-dot {
+        display: inline-block;
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        margin-right: 3px;
+    }
+    .cal-passado {
+        opacity: 0.3;
+        cursor: not-allowed !important;
+        pointer-events: none;
+    }
+    .cal-passado .cal-num { color: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "partials/_navbar.html" %}
 
 <div class="container pb-5">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm border-0 mb-3 rounded-3">
-            {% if category == 'success' %}<i class="bi bi-check-circle-fill text-success me-2"></i>{% elif category in ['danger','error'] %}<i class="bi bi-x-circle-fill text-danger me-2"></i>{% elif category == 'warning' %}<i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>{% else %}<i class="bi bi-info-circle-fill text-info me-2"></i>{% endif %} {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+    {% include "partials/_flash.html" %}
 
     <div class="row g-4">
         
@@ -163,7 +284,7 @@
                 <div class="card-body p-4 p-lg-5">
                     
                     <form id="formReserva" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="row g-4">
                             
                             <div class="col-12">
@@ -232,13 +353,14 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 // ── CALENDÁRIO CUSTOMIZADO UNIP ──────────────────────────────────────
 let currentDate = new Date();
 let selectedDate = null;
-// eventosMap: { "YYYY-MM-DD": [ {cor, titulo, periodo, professor, disciplina, turma} ] }
 let eventosMap = {};
 
 function getCalendarRangeParams() {
@@ -252,7 +374,6 @@ function getCalendarRangeParams() {
     });
 }
 
-// Carrega eventos da API e monta o mapa por data
 async function carregarEventos() {
     try {
         const res = await fetch(`/api/eventos?${getCalendarRangeParams().toString()}`);
@@ -262,7 +383,6 @@ async function carregarEventos() {
             const dateStr = ev.start ? ev.start.split('T')[0] : null;
             if (!dateStr) return;
 
-            // Para bloqueios que têm intervalo (start → end), preenche todos os dias
             if (ev.end && ev.display === 'background') {
                 let d = new Date(dateStr + 'T00:00:00');
                 const fim = new Date(ev.end + 'T00:00:00');
@@ -308,7 +428,6 @@ function renderCalendar() {
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    // Usa UTC-3 (Brasília) para definir "hoje" corretamente
     const agora = new Date();
     const brasilia = new Date(agora.getTime() - (3 * 60 * 60 * 1000));
     const hojeStr = brasilia.toISOString().split('T')[0];
@@ -316,7 +435,6 @@ function renderCalendar() {
     title.innerText = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
         .format(currentDate).toUpperCase();
 
-    // Cabeçalho dias da semana
     ['D','S','T','Q','Q','S','S'].forEach(d => {
         const el = document.createElement('div');
         el.className = 'cal-day-name';
@@ -324,7 +442,6 @@ function renderCalendar() {
         grid.appendChild(el);
     });
 
-    // Dias vazios antes do primeiro dia
     const firstDay = new Date(year, month, 1).getDay();
     for (let i = 0; i < firstDay; i++) {
         grid.appendChild(Object.assign(document.createElement('div'), { className: 'cal-day cal-empty' }));
@@ -339,24 +456,20 @@ function renderCalendar() {
         const cell = document.createElement('div');
         cell.className = 'cal-day';
 
-        // Estados visuais
         const isPast = dateStr < hojeStr;
         if (dateStr === hojeStr) cell.classList.add('cal-hoje');
         if (dateStr === selectedDate) cell.classList.add('cal-selected');
         if (isPast) cell.classList.add('cal-passado');
 
-        // Número do dia
         const num = document.createElement('span');
         num.className = 'cal-num';
         num.innerText = d;
         cell.appendChild(num);
 
-        // Dots de eventos
         if (evs.length > 0) {
             cell.classList.add('cal-has-events');
             const dotsWrap = document.createElement('div');
             dotsWrap.className = 'cal-dots';
-            // Mostra até 3 dots, o último indica "mais"
             const maxDots = Math.min(evs.length, 3);
             evs.slice(0, maxDots).forEach((ev, i) => {
                 const dot = document.createElement('span');
@@ -371,13 +484,10 @@ function renderCalendar() {
                 dotsWrap.appendChild(more);
             }
             cell.appendChild(dotsWrap);
-
-            // Tooltip
             cell.addEventListener('mouseenter', (e) => mostrarTooltip(e, dateStr, evs));
             cell.addEventListener('mouseleave', esconderTooltip);
         }
 
-        // Clique para selecionar data — bloqueia datas passadas
         if (!isPast) {
             cell.addEventListener('click', () => {
                 selectedDate = dateStr;
@@ -389,7 +499,6 @@ function renderCalendar() {
                 renderCalendar();
             });
         }
-
         grid.appendChild(cell);
     }
 }
@@ -411,12 +520,10 @@ function mostrarTooltip(e, dateStr, evs) {
     tip.innerHTML = html;
     tip.style.display = 'block';
 
-    // Posiciona o tooltip
     const rect = e.target.closest('.cal-day').getBoundingClientRect();
     const calRect = document.querySelector('.calendar-container').getBoundingClientRect();
     let top = rect.bottom - calRect.top + 6;
     let left = rect.left - calRect.left;
-    // Evita sair pela direita
     if (left + 200 > calRect.width) left = calRect.width - 210;
     tip.style.top = top + 'px';
     tip.style.left = left + 'px';
@@ -432,170 +539,12 @@ function changeMonth(offset) {
 }
 
 function handleLabChange() {
-    const labText = document.getElementById('labSelect').options[document.getElementById('labSelect').selectedIndex].text;
+    const labSelect = document.getElementById('labSelect');
+    if (labSelect.selectedIndex < 0) return;
+    const labText = labSelect.options[labSelect.selectedIndex].text;
     document.getElementById('lab2-info').style.display = (labText.includes("Laboratório 2")) ? "block" : "none";
 }
 
-// Inicializa
 document.addEventListener('DOMContentLoaded', carregarEventos);
 </script>
-
-<style>
-/* ── CALENDÁRIO CUSTOMIZADO ─────────────────────────── */
-.calendar-container {
-    background: white;
-    border-radius: 16px;
-    padding: 16px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    border: 1px solid #e2e8f0;
-    position: relative;
-}
-
-.cal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-}
-.cal-title {
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: #003366;
-    letter-spacing: 0.5px;
-}
-.cal-nav {
-    background: none;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    width: 28px; height: 28px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    color: #003366;
-    font-size: 0.75rem;
-    transition: 0.2s;
-}
-.cal-nav:hover { background: #003366; color: white; border-color: #003366; }
-
-.cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 3px;
-}
-.cal-day-name {
-    text-align: center;
-    font-size: 0.62rem;
-    font-weight: 800;
-    color: #94a3b8;
-    text-transform: uppercase;
-    padding: 4px 0;
-}
-.cal-day {
-    aspect-ratio: 1/1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: 0.15s;
-    position: relative;
-    padding: 2px;
-    gap: 2px;
-}
-.cal-day:not(.cal-empty):hover { background: #f1f5f9; }
-.cal-empty { cursor: default; }
-.cal-num {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #475569;
-    line-height: 1;
-}
-.cal-hoje { background: #fff9db; }
-.cal-hoje .cal-num { color: #b45309; font-weight: 800; }
-.cal-selected { background: #003366 !important; }
-.cal-selected .cal-num { color: white !important; }
-.cal-selected .cal-dot { opacity: 0.7; }
-
-.cal-dots {
-    display: flex;
-    gap: 2px;
-    align-items: center;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-.cal-dot {
-    width: 5px; height: 5px;
-    border-radius: 50%;
-    display: inline-block;
-    flex-shrink: 0;
-}
-.cal-dot-more {
-    font-size: 0.5rem;
-    font-weight: 800;
-    color: #64748b;
-    line-height: 1;
-}
-
-/* Tooltip */
-.cal-tooltip {
-    position: absolute;
-    z-index: 999;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 8px;
-    min-width: 190px;
-    max-width: 220px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-    pointer-events: none;
-}
-.tip-date {
-    font-size: 0.7rem;
-    font-weight: 800;
-    color: #003366;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-    letter-spacing: 0.5px;
-}
-.tip-ev {
-    padding: 5px 6px;
-    border-radius: 6px;
-    background: #f8fafc;
-    margin-bottom: 4px;
-    padding-left: 8px;
-}
-.tip-titulo {
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #1e293b;
-}
-.tip-info {
-    font-size: 0.65rem;
-    color: #64748b;
-    margin-top: 1px;
-}
-.tip-info i { margin-right: 3px; }
-
-/* Legenda */
-.cal-legend {
-    display: flex;
-    gap: 10px;
-    font-size: 0.65rem;
-    color: #64748b;
-    flex-wrap: wrap;
-}
-.leg-dot {
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    margin-right: 3px;
-}
-.cal-passado {
-    opacity: 0.3;
-    cursor: not-allowed !important;
-    pointer-events: none;
-}
-.cal-passado .cal-num { color: #94a3b8; }
-</style>
-</body>
-</html>
+{% endblock %}
