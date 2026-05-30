@@ -1,23 +1,17 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <title>Configurações | UNIP Lab Manager</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-  <style>
+{% extends "base.html" %}
+
+{% set role = usuario.role %}
+
+{% block title %}Configurações | UNIP Lab Manager{% endblock %}
+
+{% block extra_css %}
+<style>
     :root {
       --unip-blue: #003366;
       --unip-dark: #002244;
       --unip-gold: #f5b915;
     }
     body { background: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-
-    .navbar-unip {
-      background: linear-gradient(90deg, var(--unip-dark) 0%, var(--unip-blue) 100%);
-      border-bottom: 4px solid var(--unip-gold);
-    }
 
     .page-header {
       background: white;
@@ -188,7 +182,6 @@
       .table { font-size: 0.76rem; }
       .table thead th, .table tbody td { padding: 8px 8px; }
 
-      /* Oculta coluna capacidade em mobile - já aparece na pill */
       /* Botão editar menor */
       .btn-edit-lab { padding: 4px 8px !important; font-size: 0.7rem !important; }
 
@@ -200,23 +193,11 @@
       .form-control, .form-select, input, select { font-size: 16px !important; }
       .section-header { align-items: flex-start; }
     }
-  </style>
-</head>
-<body>
+</style>
+{% endblock %}
 
-<nav class="navbar navbar-dark navbar-unip shadow mb-0 py-2">
-  <div class="container d-flex justify-content-between align-items-center">
-    <a class="navbar-brand fw-bold" href="{{ url_for('painel_unip') }}">
-      <i class="bi bi-cpu-fill me-2"></i> UNIP LAB MANAGER
-    </a>
-    <div class="d-flex align-items-center gap-3">
-      <span class="text-white small d-none d-md-inline"><i class="bi bi-person-circle me-1"></i>{{ usuario.nome }}</span>
-      <a href="{{ url_for('painel_unip') }}" class="btn btn-sm btn-outline-light border-0 fw-bold">
-        <i class="bi bi-arrow-left me-1"></i> Painel
-      </a>
-    </div>
-  </div>
-</nav>
+{% block content %}
+{% include "partials/_navbar.html" %}
 
 <div class="page-header">
   <div class="container">
@@ -227,16 +208,7 @@
 
 <div class="container pb-5">
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 shadow-sm mb-3 border-0">
-          <i class="bi bi-info-circle me-2"></i>{{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
+  {% include "partials/_flash.html" %}
 
   <!-- ── LABORATÓRIOS ────────────────────────────────────── -->
   <div class="section-card">
@@ -400,7 +372,7 @@
 <div class="modal fade" id="modalNovoLab" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content shadow border-0" action="/admin/criar_laboratorio" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="modal-header bg-light">
         <h5 class="modal-title fw-bold"><i class="bi bi-building me-2"></i>Novo Laboratório</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -426,7 +398,7 @@
 <div class="modal fade" id="modalEditLab" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content shadow border-0" id="formEditLab" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="modal-header bg-light">
         <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Editar Laboratório</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -463,7 +435,7 @@
 <div class="modal fade" id="modalEditTurma" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content shadow border-0" id="formEditTurma" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="modal-header bg-light">
         <h5 class="modal-title fw-bold" id="editTurmaTitle"><i class="bi bi-people me-2"></i>Editar Turma</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -493,7 +465,9 @@
     </form>
   </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   function abrirEditLab(btn) {
@@ -532,5 +506,4 @@
     icon.className = aberto ? 'bi bi-chevron-right' : 'bi bi-chevron-down';
   }
 </script>
-</body>
-</html>
+{% endblock %}
