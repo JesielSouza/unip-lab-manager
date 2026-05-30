@@ -1,16 +1,11 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <title>UNIP Lab Manager | Painel</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-  
-  <style>
+{% extends "base.html" %}
+
+{% block title %}UNIP Lab Manager | Painel{% endblock %}
+
+{% block extra_css %}
+<style>
     :root { --unip-blue: #003366; --unip-gold: #f5b915; }
     body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .navbar-unip { background-color: var(--unip-blue) !important; border-bottom: 3px solid var(--unip-gold); }
     
     .reserva-card { 
         border: none; border-radius: 10px; border-left: 6px solid #6c757d; 
@@ -25,7 +20,6 @@
     .status-border-rejected { border-left-color: #dc3545 !important; }       /* Vermelho */
 
     .empty-state { border: 2px dashed #dee2e6; border-radius: 15px; color: #adb5bd; }
-    .navbar-brand { font-size: 1.1rem; }
 
     /* ── PAINEL DE NOTIFICAÇÕES ── */
     .notif-btn { position: relative; }
@@ -167,99 +161,54 @@
         animation: btn-spin 0.6s linear infinite;
     }
     @keyframes btn-spin { to { transform: rotate(360deg); } }
-  </style>
 
+    /* Calendário */
+    .cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .cal-title { font-size:0.75rem; font-weight:800; color:#003366; letter-spacing:0.5px; }
+    .cal-nav { background:none; border:1px solid #e2e8f0; border-radius:6px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#003366; font-size:0.7rem; transition:0.2s; }
+    .cal-nav:hover { background:#003366; color:white; border-color:#003366; }
+    .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+    .cal-day-name { text-align:center; font-size:0.58rem; font-weight:800; color:#94a3b8; text-transform:uppercase; padding:3px 0; }
+    .cal-day { aspect-ratio:1/1; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:6px; cursor:default; transition:0.15s; padding:1px; gap:1px; }
+    .cal-day:not(.cal-empty) { cursor:pointer; }
+    .cal-day:not(.cal-empty):hover { background:#f1f5f9; }
+    .cal-num { font-size:0.68rem; font-weight:500; color:#475569; line-height:1; }
+    .cal-hoje { background:#fff9db !important; }
+    .cal-hoje .cal-num { color:#b45309; font-weight:800; }
+    .cal-selected { background:#003366 !important; }
+    .cal-selected .cal-num { color:white !important; }
+    .cal-selected .cal-dot { opacity:0.7; }
+    .cal-dots { display:flex; gap:2px; align-items:center; justify-content:center; flex-wrap:wrap; }
+    .cal-dot { width:4px; height:4px; border-radius:50%; display:inline-block; }
+    .cal-dot-more { font-size:0.48rem; font-weight:800; color:#64748b; }
+    .cal-legend { display:flex; gap:8px; font-size:0.62rem; color:#64748b; flex-wrap:wrap; }
+    .leg-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:2px; }
+    /* Painel de detalhes */
+    .cal-detail { border-top:1px solid #e2e8f0; padding-top:10px; margin-top:4px; }
+    .cal-detail-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .cal-detail-header span { font-size:0.72rem; font-weight:800; color:#003366; text-transform:capitalize; }
+    .cal-detail-close { background:none; border:none; font-size:1rem; color:#94a3b8; cursor:pointer; line-height:1; padding:0; }
+    .cal-detail-close:hover { color:#dc3545; }
+    .cal-detail-item { padding:6px 8px; border-radius:6px; background:#f8fafc; margin-bottom:5px; }
+    .cal-detail-title { font-size:0.72rem; font-weight:700; color:#1e293b; }
+    .cal-detail-info { font-size:0.63rem; color:#64748b; margin-top:1px; }
+    .cal-detail-info i { margin-right:3px; }
 
-</head>
-<body>
+    /* ── MOBILE ── */
+    @media (max-width: 768px) {
+        .mini-table .col-hide-sm { display: none; }
+    }
+</style>
+{% endblock %}
 
-  {# ── TOAST CONTAINER ── #}
-  <div id="toast-container"></div>
+{% block content %}
+{# ── TOAST CONTAINER ── #}
+<div id="toast-container"></div>
 
-  <nav class="navbar navbar-expand-lg navbar-dark navbar-unip shadow-sm mb-4">
-    <div class="container">
+{% include "partials/_navbar.html" %}
 
-      {# ── BRAND ── #}
-      <span class="navbar-brand fw-bold d-flex align-items-center gap-2">
-        <i class="bi bi-mortarboard-fill"></i> UNIP Lab Manager
-      </span>
-
-      {# ── TOGGLER MOBILE ── #}
-      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Menu">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      {# ── CONTEÚDO COLAPSÁVEL ── #}
-      <div class="collapse navbar-collapse" id="navbarMain">
-        <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1 mt-2 mt-lg-0">
-
-          {# Usuário logado #}
-          <li class="nav-item">
-            <span class="nav-link pe-none text-white-50 small">
-              <i class="bi bi-person-fill me-1"></i>
-              <strong class="text-white">{{ usuario.nome }}</strong>
-              <span class="badge bg-secondary ms-1" style="font-size:0.6rem;font-weight:600;letter-spacing:.5px">{{ role }}</span>
-            </span>
-          </li>
-
-          {# Separador desktop #}
-          <li class="nav-item d-none d-lg-block"><span class="text-white-50">|</span></li>
-
-          {# Separador mobile: abaixo do nome #}
-          <li class="nav-item d-lg-none">
-            <hr style="border-color:rgba(255,255,255,0.15);margin:4px 0 8px;">
-          </li>
-
-          {# Gestão (admin/coordenador) #}
-          {% if role in ['admin', 'coordenador'] %}
-          <li class="nav-item">
-            <a class="btn btn-warning btn-sm fw-bold px-3 w-100 text-start text-lg-center" href="/coordenador/reservas">
-              <i class="bi bi-shield-lock-fill me-1"></i> Gestão
-            </a>
-          </li>
-          {% endif %}
-
-          {# Notificações (admin) #}
-          {% if role == 'admin' %}
-          <li class="nav-item">
-            {% set total_notif = reservas|selectattr('status','in',['pending','pre_approved'])|list|length %}
-            <button class="btn btn-outline-light btn-sm notif-btn position-relative w-100 text-start text-lg-center" onclick="abrirNotif()" title="Notificações">
-              <i class="bi bi-bell-fill"></i>
-              <span class="notif-badge" id="notifBadge" style="{{ 'display:none' if total_notif == 0 else '' }}">
-                {{ total_notif if total_notif < 10 else '9+' }}
-              </span>
-              <span class="ms-1">Notificações{% if total_notif > 0 %} ({{ total_notif }}){% endif %}</span>
-            </button>
-          </li>
-          {% endif %}
-
-          {# Separador mobile: antes do bloco conta/sair #}
-          <li class="nav-item d-lg-none">
-            <hr style="border-color:rgba(255,255,255,0.15);margin:8px 0 4px;">
-          </li>
-
-          {# Perfil (admin) #}
-          {% if role == 'admin' %}
-          <li class="nav-item">
-            <a class="btn btn-outline-light btn-sm w-100 text-start text-lg-center" href="{{ url_for('admin_perfil') }}">
-              <i class="bi bi-person-circle me-1"></i> Perfil
-            </a>
-          </li>
-          {% endif %}
-          {# Sair #}
-          <li class="nav-item">
-            <a class="btn btn-outline-danger btn-sm w-100 text-start text-lg-center" href="/logout">
-              <i class="bi bi-box-arrow-right me-1"></i> Sair
-            </a>
-          </li>
-
-        </ul>
-      </div>
-    </div>
-  </nav>
-
-  <div class="container">
-    <!-- Flash Messages → Toasts -->
+<div class="container">
+    {# ── FLASH MESSAGES (TOAST TRIGGER) ── #}
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <script>
@@ -436,121 +385,6 @@
             {% endif %}
 
           </div>
-          
-          {% if role == 'admin' %}
-          <!-- Aba Usuários (Inalterada na lógica) -->
-          <div class="tab-pane fade" id="tab-usuarios">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold">Gestão de Contas</h5>
-                <button class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalUsuario">
-                    <i class="bi bi-person-plus me-1"></i> Novo Usuário
-                </button>
-            </div>
-            <div class="table-responsive bg-white border rounded shadow-sm">
-                <table class="table table-hover table-sm m-0 align-middle">
-                    <thead class="table-light">
-                        <tr><th class="ps-3">Nome</th><th>Login</th><th>Email</th><th>Cargo</th><th class="text-end pe-3">Ações</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for u in usuarios %}
-                        <tr>
-                            <td class="ps-3 text-dark fw-bold">{{ u.nome }}</td>
-                            <td class="text-muted small">{{ u.login }}</td>
-                            <td class="small">{{ u.email }}</td>
-                            <td><span class="badge bg-light text-dark border">{{ u.role }}</span></td>
-                            <td class="text-end pe-3">
-                                <button class="btn btn-link btn-sm text-primary p-0 me-2" 
-                                        onclick="abrirEditarUsuario('{{ u.id }}', '{{ u.login }}', '{{ u.email }}', '{{ u.role }}', '{{ u.nome }}')">
-                                    <i class="bi bi-pencil-square"></i>
-                                </button>
-                                <a href="/admin/excluir_usuario/{{ u.id }}" class="btn btn-link btn-sm text-danger p-0" onclick="return confirm('Excluir?')">
-                                    <i class="bi bi-trash"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-          </div>
-
-          <!-- ABA LABS & TURMAS -->
-          <div class="tab-pane fade" id="tab-config">
-            <div class="row g-4">
-
-              <!-- Laboratórios -->
-              <div class="col-md-6">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                  <h5 class="fw-bold mb-0">Laboratórios</h5>
-                  <button class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalLab">
-                    <i class="bi bi-plus-lg me-1"></i> Novo Lab
-                  </button>
-                </div>
-                <div class="bg-white border rounded shadow-sm">
-                  {% if laboratorios %}
-                  <table class="table table-hover table-sm m-0 align-middle">
-                    <thead class="table-light">
-                      <tr><th class="ps-3">Nome</th><th>Capacidade</th><th class="text-end pe-3">Ações</th></tr>
-                    </thead>
-                    <tbody>
-                      {% for lab in laboratorios %}
-                      <tr>
-                        <td class="ps-3 fw-bold text-dark">{{ lab.nome }}</td>
-                        <td class="text-muted small"><i class="bi bi-people me-1"></i>{{ lab.capacidade }} alunos</td>
-                        <td class="text-end pe-3">
-                          <a href="/admin/excluir_laboratorio/{{ lab.id }}" class="btn btn-link btn-sm text-danger p-0"
-                             onclick="return confirm('Excluir laboratório {{ lab.nome }}?')">
-                            <i class="bi bi-trash"></i>
-                          </a>
-                        </td>
-                      </tr>
-                      {% endfor %}
-                    </tbody>
-                  </table>
-                  {% else %}
-                  <div class="text-center text-muted py-4 small">
-                    <i class="bi bi-building-x d-block fs-4 mb-2"></i> Nenhum laboratório cadastrado.
-                  </div>
-                  {% endif %}
-                </div>
-              </div>
-
-              <!-- Turmas -->
-              <div class="col-md-6">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                  <h5 class="fw-bold mb-0">Turmas</h5>
-                  <button class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTurma">
-                    <i class="bi bi-plus-lg me-1"></i> Nova Turma
-                  </button>
-                </div>
-                <div class="bg-white border rounded shadow-sm">
-                  {% if turmas %}
-                  <table class="table table-hover table-sm m-0 align-middle">
-                    <thead class="table-light">
-                      <tr><th class="ps-3">Turma</th><th>Curso</th><th>Semestre</th></tr>
-                    </thead>
-                    <tbody>
-                      {% for t in turmas %}
-                      <tr>
-                        <td class="ps-3 fw-bold text-dark">{{ t.nome }}</td>
-                        <td class="text-muted small">{{ t.curso }}</td>
-                        <td class="small">{{ t.semestre }}</td>
-                      </tr>
-                      {% endfor %}
-                    </tbody>
-                  </table>
-                  {% else %}
-                  <div class="text-center text-muted py-4 small">
-                    <i class="bi bi-people d-block fs-4 mb-2"></i> Nenhuma turma cadastrada.
-                  </div>
-                  {% endif %}
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          {% endif %}
         </div>
       </div>
 
@@ -588,140 +422,9 @@
         </div>
       </div>
     </div>
-  </div>
+</div>
 
-  <!-- Modal Novo Laboratório -->
-  <div class="modal fade" id="modalLab" tabindex="-1">
-    <div class="modal-dialog">
-      <form class="modal-content shadow border-0" action="/admin/criar_laboratorio" method="POST">
-        <div class="modal-header bg-light">
-          <h5 class="modal-title fw-bold"><i class="bi bi-building me-2"></i>Novo Laboratório</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body p-4">
-          <div class="mb-3">
-            <label class="small fw-bold">Nome do Laboratório</label>
-            <input type="text" name="nome" class="form-control" placeholder="Ex: Laboratório 3" required>
-          </div>
-          <div class="mb-3">
-            <label class="small fw-bold">Capacidade (alunos)</label>
-            <input type="number" name="capacidade" class="form-control" placeholder="Ex: 40" min="1" required>
-          </div>
-        </div>
-        <div class="modal-footer border-0">
-          <button type="submit" class="btn btn-primary px-4 shadow-sm">Criar Laboratório</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal Nova Turma -->
-  <div class="modal fade" id="modalTurma" tabindex="-1">
-    <div class="modal-dialog">
-      <form class="modal-content shadow border-0" action="/admin/criar_turma" method="POST">
-        <div class="modal-header bg-light">
-          <h5 class="modal-title fw-bold"><i class="bi bi-people me-2"></i>Nova Turma</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body p-4">
-          <div class="mb-3">
-            <label class="small fw-bold">Sigla da Turma</label>
-            <input type="text" name="nome" class="form-control" placeholder="Ex: ADS3A" required>
-          </div>
-          <div class="mb-3">
-            <label class="small fw-bold">Curso</label>
-            <select name="curso" class="form-select" required>
-              <option value="">Selecione...</option>
-              <option value="Análise e Desenvolvimento de Sistemas">Análise e Desenvolvimento de Sistemas</option>
-              <option value="Ciência da Computação">Ciência da Computação</option>
-              <option value="Direito">Direito</option>
-              <option value="Administração">Administração</option>
-              <option value="Engenharia de Software">Engenharia de Software</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="small fw-bold">Semestre</label>
-            <select name="semestre" class="form-select" required>
-              <option value="1º Semestre">1º Semestre</option>
-              <option value="2º Semestre">2º Semestre</option>
-              <option value="3º Semestre">3º Semestre</option>
-              <option value="4º Semestre">4º Semestre</option>
-              <option value="5º Semestre">5º Semestre</option>
-              <option value="6º Semestre">6º Semestre</option>
-            </select>
-          </div>
-        </div>
-        <div class="modal-footer border-0">
-          <button type="submit" class="btn btn-primary px-4 shadow-sm">Criar Turma</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal Novo Usuário -->
-  <div class="modal fade" id="modalUsuario" tabindex="-1">
-    <div class="modal-dialog">
-      <form class="modal-content shadow border-0" action="/admin/criar_usuario" method="POST">
-        <div class="modal-header bg-light">
-            <h5 class="modal-title fw-bold">Novo Usuário</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body p-4">
-            <div class="mb-3">
-                <label class="small fw-bold">Nome Completo</label>
-                <input type="text" name="nome" class="form-control" placeholder="Ex: Prof. Ricardo Silva" required>
-            </div>
-            <div class="mb-3"><label class="small fw-bold">Login / RA</label><input type="text" name="login" class="form-control" required></div>
-            <div class="mb-3"><label class="small fw-bold">E-mail</label><input type="email" name="email" class="form-control" required></div>
-            <div class="row">
-                <div class="col-6 mb-3"><label class="small fw-bold">Cargo</label>
-                    <select name="role" class="form-select">
-                        <option value="professor">Professor</option>
-                        <option value="coordenador">Coordenador</option>
-                        <option value="admin">Administrador</option>
-                    </select>
-                </div>
-                <div class="col-6 mb-3"><label class="small fw-bold">Senha</label><input type="password" name="senha" class="form-control" required></div>
-            </div>
-        </div>
-        <div class="modal-footer border-0">
-            <button type="submit" class="btn btn-primary px-4 shadow-sm">Criar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div class="modal fade" id="modalEditarUsuario" tabindex="-1">
-    <div class="modal-dialog">
-      <form id="formEditarUsuario" class="modal-content shadow border-0" method="POST">
-        <div class="modal-header bg-primary text-white">
-            <h5 class="modal-title fw-bold">Editar Usuário</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body p-4">
-            <div class="mb-3"><label class="small fw-bold">Nome Completo</label><input type="text" id="edit_nome" name="nome" class="form-control" required></div>
-            <div class="mb-3"><label class="small fw-bold">Login</label><input type="text" id="edit_login" name="login" class="form-control" required></div>
-            <div class="mb-3"><label class="small fw-bold">E-mail</label><input type="email" id="edit_email" name="email" class="form-control" required></div>
-            <div class="mb-3">
-                <label class="small fw-bold">Cargo</label>
-                <select id="edit_role" name="role" class="form-select">
-                    <option value="professor">Professor</option>
-                    <option value="coordenador">Coordenador</option>
-                    <option value="admin">Administrador</option>
-                    <option value="aluno">Aluno</option>
-                </select>
-            </div>
-            <div class="alert alert-info py-2 small mb-0">Senha em branco mantém a atual.</div>
-            <div class="mt-3"><label class="small fw-bold">Nova Senha</label><input type="password" name="senha" class="form-control"></div>
-        </div>
-        <div class="modal-footer border-0">
-            <button type="submit" class="btn btn-primary px-4 shadow-sm">Salvar Alterações</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- ── OVERLAY + DRAWER DE NOTIFICAÇÕES ── -->
+<!-- ── OVERLAY + DRAWER DE NOTIFICAÇÕES ── -->
 <div class="notif-overlay" id="notifOverlay" onclick="fecharNotif()"></div>
 <div class="notif-drawer" id="notifDrawer">
     <div class="notif-header">
@@ -839,8 +542,42 @@
     </div>
 </div>
 
+{# ── MODAL QR CODE ── #}
+<div class="modal fade" id="modalQR" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-bold" id="qrModalTitulo">QR Code da Reserva</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <div id="qrcode" class="d-inline-block p-3 bg-white rounded-3 shadow-sm mb-3"></div>
+        <div class="card border-0 bg-light rounded-3 mx-auto" style="max-width:320px">
+          <div class="card-body py-3 px-4 text-start small">
+            <div class="fw-bold text-dark mb-2" id="qrLab" style="font-size:1rem"></div>
+            <div class="text-muted mb-1"><i class="bi bi-people me-1"></i><span id="qrTurma"></span></div>
+            <div class="text-muted mb-1"><i class="bi bi-person me-1"></i><span id="qrProf"></span></div>
+            <div class="text-muted mb-1"><i class="bi bi-book me-1"></i><span id="qrDisc"></span></div>
+            <div class="text-muted mb-1"><i class="bi bi-calendar-event me-1"></i><span id="qrData"></span></div>
+            <div class="text-muted"><i class="bi bi-clock me-1"></i><span id="qrHorario"></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0 justify-content-center gap-2">
+        <button class="btn btn-outline-secondary btn-sm" onclick="downloadQR()">
+          <i class="bi bi-download me-1"></i> Baixar QR
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
     // ── TOAST SYSTEM ─────────────────────────────────────────────────────
     const TOAST_ICONS = {
       success: 'bi-check-circle-fill',
@@ -897,15 +634,6 @@
       setTimeout(() => btn.classList.remove('loading'), 8000);
     });
     // ─────────────────────────────────────────────────────────────────────
-
-    function abrirEditarUsuario(id, login, email, role, nome) {
-        document.getElementById('formEditarUsuario').action = '/admin/editar_usuario/' + id;
-        document.getElementById('edit_nome').value = nome || '';
-        document.getElementById('edit_login').value = login;
-        document.getElementById('edit_email').value = email;
-        document.getElementById('edit_role').value = role;
-        new bootstrap.Modal(document.getElementById('modalEditarUsuario')).show();
-    }
 
     // ── CALENDÁRIO CUSTOMIZADO UNIP ──────────────────────────────────────
     let currentDate = new Date();
@@ -1132,110 +860,40 @@
     // Inicia polling a cada 30 segundos
     setInterval(verificarNotificacoes, 30000);
     // ────────────────────────────────────────────────────────────────────
-  </script>
 
-  <style>
-    .cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-    .cal-title { font-size:0.75rem; font-weight:800; color:#003366; letter-spacing:0.5px; }
-    .cal-nav { background:none; border:1px solid #e2e8f0; border-radius:6px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#003366; font-size:0.7rem; transition:0.2s; }
-    .cal-nav:hover { background:#003366; color:white; border-color:#003366; }
-    .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
-    .cal-day-name { text-align:center; font-size:0.58rem; font-weight:800; color:#94a3b8; text-transform:uppercase; padding:3px 0; }
-    .cal-day { aspect-ratio:1/1; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:6px; cursor:default; transition:0.15s; padding:1px; gap:1px; }
-    .cal-day:not(.cal-empty) { cursor:pointer; }
-    .cal-day:not(.cal-empty):hover { background:#f1f5f9; }
-    .cal-num { font-size:0.68rem; font-weight:500; color:#475569; line-height:1; }
-    .cal-hoje { background:#fff9db !important; }
-    .cal-hoje .cal-num { color:#b45309; font-weight:800; }
-    .cal-selected { background:#003366 !important; }
-    .cal-selected .cal-num { color:white !important; }
-    .cal-selected .cal-dot { opacity:0.7; }
-    .cal-dots { display:flex; gap:2px; align-items:center; justify-content:center; flex-wrap:wrap; }
-    .cal-dot { width:4px; height:4px; border-radius:50%; display:inline-block; }
-    .cal-dot-more { font-size:0.48rem; font-weight:800; color:#64748b; }
-    .cal-legend { display:flex; gap:8px; font-size:0.62rem; color:#64748b; flex-wrap:wrap; }
-    .leg-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:2px; }
-    /* Painel de detalhes */
-    .cal-detail { border-top:1px solid #e2e8f0; padding-top:10px; margin-top:4px; }
-    .cal-detail-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-    .cal-detail-header span { font-size:0.72rem; font-weight:800; color:#003366; text-transform:capitalize; }
-    .cal-detail-close { background:none; border:none; font-size:1rem; color:#94a3b8; cursor:pointer; line-height:1; padding:0; }
-    .cal-detail-close:hover { color:#dc3545; }
-    .cal-detail-item { padding:6px 8px; border-radius:6px; background:#f8fafc; margin-bottom:5px; }
-    .cal-detail-title { font-size:0.72rem; font-weight:700; color:#1e293b; }
-    .cal-detail-info { font-size:0.63rem; color:#64748b; margin-top:1px; }
-    .cal-detail-info i { margin-right:3px; }
-  </style>
+    // ── QR CODE SYSTEM ──────────────────────────────────────────────────
+    function abrirQR(id, lab, turma, professor, disciplina, data, hi, hf) {
+        const container = document.getElementById('qrcode');
+        container.innerHTML = '';
+        const texto = 'Reserva#' + id + ' ' + lab + ' ' + data + ' ' + hi + '-' + hf;
 
+        document.getElementById('qrLab').textContent = lab;
+        document.getElementById('qrTurma').textContent = turma;
+        document.getElementById('qrProf').textContent = professor;
+        document.getElementById('qrDisc').textContent = disciplina;
+        document.getElementById('qrData').textContent = data;
+        document.getElementById('qrHorario').textContent = hi + ' – ' + hf;
+        document.getElementById('qrModalTitulo').textContent = 'QR Code — Reserva #' + id;
 
-<!-- ── MODAL QR CODE ── -->
-<div class="modal fade" id="modalQR" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow">
-      <div class="modal-header border-0 pb-0">
-        <h6 class="modal-title fw-bold" id="qrModalTitulo">QR Code da Reserva</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body text-center py-4">
-        <div id="qrcode" class="d-inline-block p-3 bg-white rounded-3 shadow-sm mb-3"></div>
-        <div class="card border-0 bg-light rounded-3 mx-auto" style="max-width:320px">
-          <div class="card-body py-3 px-4 text-start small">
-            <div class="fw-bold text-dark mb-2" id="qrLab" style="font-size:1rem"></div>
-            <div class="text-muted mb-1"><i class="bi bi-people me-1"></i><span id="qrTurma"></span></div>
-            <div class="text-muted mb-1"><i class="bi bi-person me-1"></i><span id="qrProf"></span></div>
-            <div class="text-muted mb-1"><i class="bi bi-book me-1"></i><span id="qrDisc"></span></div>
-            <div class="text-muted mb-1"><i class="bi bi-calendar-event me-1"></i><span id="qrData"></span></div>
-            <div class="text-muted"><i class="bi bi-clock me-1"></i><span id="qrHorario"></span></div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer border-0 pt-0 justify-content-center gap-2">
-        <button class="btn btn-outline-secondary btn-sm" onclick="downloadQR()">
-          <i class="bi bi-download me-1"></i> Baixar QR
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
-      </div>
-    </div>
-  </div>
-</div>
+        new QRCode(container, {
+            text: texto,
+            width: 200,
+            height: 200,
+            colorDark: '#1e3a5f',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.L
+        });
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>
-  function abrirQR(id, lab, turma, professor, disciplina, data, hi, hf) {
-    const container = document.getElementById('qrcode');
-    container.innerHTML = '';
+        new bootstrap.Modal(document.getElementById('modalQR')).show();
+    }
 
-    // Texto compacto para não estourar o limite do QR
-    const texto = 'Reserva#' + id + ' ' + lab + ' ' + data + ' ' + hi + '-' + hf;
-
-    document.getElementById('qrLab').textContent = lab;
-    document.getElementById('qrTurma').textContent = turma;
-    document.getElementById('qrProf').textContent = professor;
-    document.getElementById('qrDisc').textContent = disciplina;
-    document.getElementById('qrData').textContent = data;
-    document.getElementById('qrHorario').textContent = hi + ' – ' + hf;
-    document.getElementById('qrModalTitulo').textContent = 'QR Code — Reserva #' + id;
-
-    new QRCode(container, {
-      text: texto,
-      width: 200,
-      height: 200,
-      colorDark: '#1e3a5f',
-      colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.L
-    });
-
-    new bootstrap.Modal(document.getElementById('modalQR')).show();
-  }
-
-  function downloadQR() {
-    const canvas = document.querySelector('#qrcode canvas');
-    if (!canvas) return;
-    const link = document.createElement('a');
-    link.download = 'reserva-qrcode.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  }
+    function downloadQR() {
+        const canvas = document.querySelector('#qrcode canvas');
+        if (!canvas) return;
+        const link = document.createElement('a');
+        link.download = 'reserva-qrcode.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
 </script>
-</body>
-</html>
+{% endblock %}
