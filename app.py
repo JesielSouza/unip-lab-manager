@@ -1649,7 +1649,9 @@ def ver_alunos_turmas(turma_selecionada=None):
     return render_template("ver_alunos_turmas.html", 
                            turmas=lista_turmas, 
                            alunos=alunos_da_turma, 
-                           turma_ativa=turma_selecionada)
+                           turma_ativa=turma_selecionada,
+                           usuario=usuario,
+                           role=usuario.role)
 
 @app.route("/painel_unip")
 def painel_unip():
