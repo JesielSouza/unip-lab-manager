@@ -284,6 +284,8 @@ def relatorio_reservas():
         filtro_turma=turma,
         filtro_disciplina=disciplina,
         filtro_status=status,
+        usuario=usuario,
+        role=usuario.role,
         usuario_id=usuario.id,
         usuario_logado=usuario.login,
         page=page_rel,
