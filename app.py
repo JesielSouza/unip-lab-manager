@@ -1387,7 +1387,9 @@ def gerenciar_bloqueios():
     
     return render_template("admin_bloqueios.html", 
                            bloqueios=bloqueios, 
-                           laboratorios=lista_laboratorios) # Passa para o HTML
+                           laboratorios=lista_laboratorios,
+                           usuario=usuario_logado,
+                           role=usuario_logado.role) # Passa para o HTML
 
 @app.route("/admin/excluir_bloqueio/<int:id>")
 def excluir_bloqueio(id):
