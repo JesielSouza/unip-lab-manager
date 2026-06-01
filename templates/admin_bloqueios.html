@@ -1,114 +1,67 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>UNIP Lab Manager | Gestão de Bloqueios</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        :root { 
-            --unip-blue: #003366; 
-            --unip-gold: #f5b915; 
-            --bg-gray: #f8fafc; 
-        }
-        
-        body { background-color: var(--bg-gray); font-family: 'Inter', 'Segoe UI', sans-serif; }
-        
-        .navbar-unip { 
-            background: linear-gradient(90deg, #002244 0%, var(--unip-blue) 100%); 
-            border-bottom: 4px solid var(--unip-gold);
-            padding: 0.8rem 0;
-        }
+{% extends "base.html" %}
 
-        .section-title { 
-            font-size: 0.8rem; font-weight: 800; color: #64748b; 
-            text-transform: uppercase; letter-spacing: 1.2px;
-            border-left: 4px solid #ef4444; padding-left: 12px; margin-bottom: 20px;
-        }
+{% block title %}UNIP Lab Manager | Gestão de Bloqueios{% endblock %}
 
-        .card-custom { 
-            border: none; border-radius: 20px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            background: white;
-        }
-
-        .form-label { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
-        
-        .form-control, .form-select { 
-            border: 1px solid #e2e8f0; padding: 12px; border-radius: 12px; 
-        }
-
-        .btn-interditar {
-            background: #b91c1c; color: white; border: none;
-            padding: 14px; border-radius: 12px; font-weight: 700;
-            transition: all 0.3s;
-        }
-        .btn-interditar:hover { background: #991b1b; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(185, 28, 28, 0.3); }
-
-        .bloqueio-item {
-            border-left: 5px solid #ef4444;
-            transition: 0.2s;
-        }
-        .bloqueio-item:hover { background: #fffafb; }
-
-        .badge-date {
-            background: #fee2e2; color: #b91c1c;
-            font-weight: 700; font-size: 0.75rem;
-            padding: 6px 12px; border-radius: 8px;
-        }
+{% block extra_css %}
+<style>
+    :root { 
+        --unip-blue: #003366; 
+        --unip-gold: #f5b915; 
+        --bg-gray: #f8fafc; 
+    }
     
+    body { background-color: var(--bg-gray); font-family: 'Inter', 'Segoe UI', sans-serif; }
+    
+    .section-title { 
+        font-size: 0.8rem; font-weight: 800; color: #64748b; 
+        text-transform: uppercase; letter-spacing: 1.2px;
+        border-left: 4px solid #ef4444; padding-left: 12px; margin-bottom: 20px;
+    }
+
+    .card-custom { 
+        border: none; border-radius: 20px; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        background: white;
+    }
+
+    .form-label { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+    
+    .form-control, .form-select { 
+        border: 1px solid #e2e8f0; padding: 12px; border-radius: 12px; 
+    }
+
+    .btn-interditar {
+        background: #b91c1c; color: white; border: none;
+        padding: 14px; border-radius: 12px; font-weight: 700;
+        transition: all 0.3s;
+    }
+    .btn-interditar:hover { background: #991b1b; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(185, 28, 28, 0.3); }
+
+    .bloqueio-item {
+        border-left: 5px solid #ef4444;
+        transition: 0.2s;
+    }
+    .bloqueio-item:hover { background: #fffafb; }
+
+    .badge-date {
+        background: #fee2e2; color: #b91c1c;
+        font-weight: 700; font-size: 0.75rem;
+        padding: 6px 12px; border-radius: 8px;
+    }
 
     @media (max-width: 768px) {
       .col-lg-4, .col-lg-8 { width: 100% !important; }
       .bloqueio-item .card-body { flex-direction: column !important; gap: 12px; }
     }
-    /* ── MOBILE RESPONSIVO ─────────────────────────────────── */
-    @media (max-width: 768px) {
-      .container { padding-left: 12px; padding-right: 12px; }
-      .page-header { padding: 1rem 0; }
-      .page-header h4 { font-size: 1.1rem; }
-      .page-header .d-flex { flex-wrap: wrap; gap: 8px; }
-      .table-responsive { -webkit-overflow-scrolling: touch; }
-      .table { font-size: 0.78rem; }
-      .table thead th, .table tbody td { padding: 8px 10px; }
-      .results-card { border-radius: 12px; }
-      .filter-bar, .filter-card { flex-direction: column; }
-      .filter-bar input, .filter-bar select { min-width: unset !important; width: 100%; }
-      .btn { font-size: 0.8rem; }
-      .d-flex.gap-3 { gap: 8px !important; }
-      .d-flex.gap-2 { gap: 6px !important; }
-      .row.g-4 > [class*='col-'] { margin-bottom: 0; }
-    }
-    @media (max-width: 480px) {
-      body { font-size: 0.9rem; }
-      .navbar-brand { font-size: 0.85rem; }
-      h4 { font-size: 1rem !important; }
-      .form-control, .form-select, input, select, textarea {
-        font-size: 16px !important; /* evita zoom no iOS */
-        border-radius: 10px;
-      }
-      .btn-unip, .btn-login, .btn-salvar, .btn-filtrar, .btn-interditar {
-        width: 100%;
-        margin-bottom: 6px;
-      }
-    }
-  </style>
-</head>
-<body>
+</style>
+{% endblock %}
 
-<nav class="navbar navbar-dark navbar-unip shadow mb-4">
-    <div class="container d-flex justify-content-between">
-        <a class="navbar-brand fw-bold" href="{{ url_for('painel_unip') }}">
-            <i class="bi bi-shield-lock-fill me-2"></i> UNIP LAB MANAGER
-        </a>
-        <a href="{{ url_for('painel_unip') }}" class="btn btn-sm btn-outline-light border-0 fw-bold">
-            <i class="bi bi-arrow-left me-1"></i> PAINEL
-        </a>
-    </div>
-</nav>
+{% block content %}
+{% include "partials/_navbar.html" %}
 
 <div class="container pb-5">
+    {% include "partials/_flash.html" %}
+
     <div class="row g-4">
         <div class="col-lg-4">
             <div class="section-title">Configurar Interdição</div>
@@ -145,17 +98,6 @@
 
         <div class="col-lg-8">
             <div class="section-title">Bloqueios Ativos</div>
-            
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show rounded-4 shadow-sm" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
 
             {% if bloqueios %}
                 {% for b in bloqueios %}
@@ -174,6 +116,7 @@
                             </h6>
                         </div>
                         <div>
+                            {# NOTA: Ação legada GET transacional mantida conforme instrução do Board. #}
                             <a href="{{ url_for('excluir_bloqueio', id=b.id) }}" 
                                class="btn btn-outline-danger border-0 rounded-circle"
                                onclick="return confirm('Deseja realmente remover este bloqueio?')">
@@ -192,7 +135,8 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+{% endblock %}
