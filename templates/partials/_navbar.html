@@ -1,7 +1,13 @@
+<style>
+    .navbar-unip {
+        background: linear-gradient(90deg, #002244 0%, #003366 100%) !important;
+        border-bottom: 4px solid #f5b915 !important;
+    }
+</style>
 <nav class="navbar navbar-expand-lg navbar-dark navbar-unip shadow-sm mb-4">
     <div class="container">
         {# BRAND #}
-        <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('painel_unip') if role != 'aluno' else url_for('painel_aluno') }}">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('painel_unip') }}">
             <i class="bi bi-cpu-fill"></i> UNIP LAB MANAGER
         </a>
 
@@ -28,7 +34,7 @@
 
                 {# Dashboard/Painel #}
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('painel_unip') if role != 'aluno' else url_for('painel_aluno') }}">
+                    <a class="nav-link" href="{{ url_for('painel_unip') }}">
                         <i class="bi bi-grid-fill me-1"></i> Painel
                     </a>
                 </li>
