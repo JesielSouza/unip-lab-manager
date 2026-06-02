@@ -1007,7 +1007,7 @@ def editar_usuario(id):
 
     if request.method == "GET":
         turmas = Turma.query.filter_by(status='ativa').order_by(Turma.nome).all()
-        return render_template("editar_usuario.html", user=user, turmas=turmas)
+        return render_template("editar_usuario.html", user=user, turmas=turmas, usuario=usuario_logado, role=usuario_logado.role)
 
     # POST: Atualiza os dados
     user.nome = request.form.get("nome", user.nome)
