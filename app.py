@@ -1393,7 +1393,7 @@ def gerenciar_bloqueios():
                            usuario=usuario_logado,
                            role=usuario_logado.role) # Passa para o HTML
 
-@app.route("/admin/excluir_bloqueio/<int:id>")
+@app.route("/admin/excluir_bloqueio/<int:id>", methods=["POST"])
 def excluir_bloqueio(id):
     if "usuario" not in session: return redirect("/login")
     
