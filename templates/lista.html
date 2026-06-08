@@ -460,13 +460,13 @@
                 <span class="badge bg-warning text-dark" style="font-size:0.6rem">Aguardando Coordenador</span>
             </div>
             <div class="notif-item-actions">
-                <form method="POST" action="{{ url_for('aprovar_reserva', id=r.id) }}" onsubmit="return confirm('Deseja aprovar esta reserva?')" style="margin:0">
+                <form method="POST" action="{{ url_for('aprovar_reserva', id=r.id) }}" onsubmit="return confirmarAcaoReserva(this, 'Deseja aprovar esta reserva?')" style="margin:0">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-success btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px">
                         <span class="btn-label"><i class="bi bi-check-all"></i> Aprovar</span>
                     </button>
                 </form>
-                <form method="POST" action="{{ url_for('rejeitar_reserva', id=r.id) }}" onsubmit="return confirm('Deseja realmente rejeitar esta reserva?')" style="margin:0">
+                <form method="POST" action="{{ url_for('rejeitar_reserva', id=r.id) }}" onsubmit="return confirmarAcaoReserva(this, 'Deseja realmente rejeitar esta reserva?')" style="margin:0">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-outline-danger btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px">
                         <span class="btn-label"><i class="bi bi-x"></i> Rejeitar</span>
@@ -487,13 +487,13 @@
                 <span class="badge bg-primary" style="font-size:0.6rem">Pré-aprovado — Falta aprovação final</span>
             </div>
             <div class="notif-item-actions">
-                <form method="POST" action="{{ url_for('aprovar_reserva', id=r.id) }}" onsubmit="return confirm('Deseja aprovar definitivamente esta reserva?')" style="margin:0">
+                <form method="POST" action="{{ url_for('aprovar_reserva', id=r.id) }}" onsubmit="return confirmarAcaoReserva(this, 'Deseja aprovar definitivamente esta reserva?')" style="margin:0">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-success btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px">
                         <span class="btn-label"><i class="bi bi-check-all"></i> Aprovar Final</span>
                     </button>
                 </form>
-                <form method="POST" action="{{ url_for('rejeitar_reserva', id=r.id) }}" onsubmit="return confirm('Deseja realmente rejeitar esta reserva?')" style="margin:0">
+                <form method="POST" action="{{ url_for('rejeitar_reserva', id=r.id) }}" onsubmit="return confirmarAcaoReserva(this, 'Deseja realmente rejeitar esta reserva?')" style="margin:0">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-outline-danger btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px">
                         <span class="btn-label"><i class="bi bi-x"></i> Rejeitar</span>
@@ -637,17 +637,23 @@
     }
     // ─────────────────────────────────────────────────────────────────────
 
-    // ── LOADING STATE — BOTÕES APROVAR/REJEITAR ───────────────────────
-    document.addEventListener('click', function(e) {
-      const btn = e.target.closest('.btn-acao-reserva');
-      if (!btn) return;
+    // ── CONFIRMAÇÃO + LOADING — BOTÕES APROVAR/REJEITAR ────────────────
+    function confirmarAcaoReserva(form, mensagem) {
+      if (!confirm(mensagem)) return false;
+
+      const btn = form.querySelector('.btn-acao-reserva');
+      if (!btn) return true;
+
       // Evita duplo clique
-      if (btn.classList.contains('loading')) { e.preventDefault(); return; }
+      if (btn.classList.contains('loading')) return false;
+
       btn.classList.add('loading');
       // Fallback: remove loading após 8s caso algo falhe
       setTimeout(() => btn.classList.remove('loading'), 8000);
-    });
-    // ─────────────────────────────────────────────────────────────────────
+
+      return true;
+    }
+
 
     // ── CALENDÁRIO CUSTOMIZADO UNIP ──────────────────────────────────────
     let currentDate = new Date();
@@ -869,11 +875,11 @@
                     </span>
                 </div>
                 <div class="notif-item-actions">
-                    <form method="POST" action="/aprovar_reserva/${r.id}" onsubmit="return confirm('${approveConfirm}')" style="margin:0">
+                    <form method="POST" action="/aprovar_reserva/${r.id}" onsubmit="return confirmarAcaoReserva(this, '${approveConfirm}')" style="margin:0">
                         <input type="hidden" name="csrf_token" value="${CSRF_TOKEN}">
                         <button type="submit" class="btn btn-success btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px"><span class="btn-label"><i class="bi bi-check-all"></i> ${approveLabel}</span></button>
                     </form>
-                    <form method="POST" action="/rejeitar_reserva/${r.id}" onsubmit="return confirm('Deseja realmente rejeitar esta reserva?')" style="margin:0">
+                    <form method="POST" action="/rejeitar_reserva/${r.id}" onsubmit="return confirmarAcaoReserva(this, 'Deseja realmente rejeitar esta reserva?')" style="margin:0">
                         <input type="hidden" name="csrf_token" value="${CSRF_TOKEN}">
                         <button type="submit" class="btn btn-outline-danger btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px"><span class="btn-label"><i class="bi bi-x"></i> Rejeitar</span></button>
                     </form>
