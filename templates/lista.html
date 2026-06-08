@@ -460,12 +460,18 @@
                 <span class="badge bg-warning text-dark" style="font-size:0.6rem">Aguardando Coordenador</span>
             </div>
             <div class="notif-item-actions">
-                <a href="{{ url_for('aprovar_reserva', id=r.id) }}" class="btn btn-success btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px">
-                    <span class="btn-label"><i class="bi bi-check-all"></i> Aprovar</span>
-                </a>
-                <a href="{{ url_for('rejeitar_reserva', id=r.id) }}" class="btn btn-outline-danger btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px">
-                    <span class="btn-label"><i class="bi bi-x"></i> Rejeitar</span>
-                </a>
+                <form method="POST" action="{{ url_for('aprovar_reserva', id=r.id) }}" onsubmit="return confirm('Deseja aprovar esta reserva?')" style="margin:0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-success btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px">
+                        <span class="btn-label"><i class="bi bi-check-all"></i> Aprovar</span>
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('rejeitar_reserva', id=r.id) }}" onsubmit="return confirm('Deseja realmente rejeitar esta reserva?')" style="margin:0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-danger btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px">
+                        <span class="btn-label"><i class="bi bi-x"></i> Rejeitar</span>
+                    </button>
+                </form>
             </div>
         </div>
         {% endfor %}
@@ -481,12 +487,18 @@
                 <span class="badge bg-primary" style="font-size:0.6rem">Pré-aprovado — Falta aprovação final</span>
             </div>
             <div class="notif-item-actions">
-                <a href="{{ url_for('aprovar_reserva', id=r.id) }}" class="btn btn-success btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px">
-                    <span class="btn-label"><i class="bi bi-check-all"></i> Aprovar Final</span>
-                </a>
-                <a href="{{ url_for('rejeitar_reserva', id=r.id) }}" class="btn btn-outline-danger btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px">
-                    <span class="btn-label"><i class="bi bi-x"></i> Rejeitar</span>
-                </a>
+                <form method="POST" action="{{ url_for('aprovar_reserva', id=r.id) }}" onsubmit="return confirm('Deseja aprovar definitivamente esta reserva?')" style="margin:0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-success btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px">
+                        <span class="btn-label"><i class="bi bi-check-all"></i> Aprovar Final</span>
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('rejeitar_reserva', id=r.id) }}" onsubmit="return confirm('Deseja realmente rejeitar esta reserva?')" style="margin:0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-danger btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px">
+                        <span class="btn-label"><i class="bi bi-x"></i> Rejeitar</span>
+                    </button>
+                </form>
             </div>
         </div>
         {% endfor %}
@@ -578,6 +590,8 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+    const CSRF_TOKEN = {{ csrf_token()|tojson }};
+
     // ── TOAST SYSTEM ─────────────────────────────────────────────────────
     const TOAST_ICONS = {
       success: 'bi-check-circle-fill',
@@ -841,20 +855,31 @@
             container.innerHTML = '<div class="notif-empty"><i class="bi bi-check-circle-fill text-success"></i><div style="font-size:0.8rem;font-weight:700;color:#1e293b">Tudo em dia!</div></div>';
             return;
         }
-        container.innerHTML = reservas.map(r => `
-            <div class="notif-item ${r.status === 'pending' ? 'pending' : 'pre'}">
+        container.innerHTML = reservas.map(r => {
+            const isPending = r.status === 'pending';
+            const approveLabel = isPending ? 'Aprovar' : 'Aprovar Final';
+            const approveConfirm = isPending ? 'Deseja aprovar esta reserva?' : 'Deseja aprovar definitivamente esta reserva?';
+            return `
+            <div class="notif-item ${isPending ? 'pending' : 'pre'}">
                 <div class="notif-item-title">${r.lab}</div>
                 <div class="notif-item-sub"><i class="bi bi-person me-1"></i>${r.professor} &nbsp;·&nbsp; <i class="bi bi-calendar me-1"></i>${r.data}</div>
                 <div class="notif-item-sub mt-1">
-                    <span class="badge ${r.status === 'pending' ? 'bg-warning text-dark' : 'bg-primary'}" style="font-size:0.6rem">
-                        ${r.status === 'pending' ? 'Aguardando Coordenador' : 'Pré-aprovado — Falta aprovação final'}
+                    <span class="badge ${isPending ? 'bg-warning text-dark' : 'bg-primary'}" style="font-size:0.6rem">
+                        ${isPending ? 'Aguardando Coordenador' : 'Pré-aprovado — Falta aprovação final'}
                     </span>
                 </div>
                 <div class="notif-item-actions">
-                    <a href="/aprovar_reserva/${r.id}" class="btn btn-success btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px"><span class="btn-label"><i class="bi bi-check-all"></i> Aprovar</span></a>
-                    <a href="/rejeitar_reserva/${r.id}" class="btn btn-outline-danger btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px"><span class="btn-label"><i class="bi bi-x"></i> Rejeitar</span></a>
+                    <form method="POST" action="/aprovar_reserva/${r.id}" onsubmit="return confirm('${approveConfirm}')" style="margin:0">
+                        <input type="hidden" name="csrf_token" value="${CSRF_TOKEN}">
+                        <button type="submit" class="btn btn-success btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px"><span class="btn-label"><i class="bi bi-check-all"></i> ${approveLabel}</span></button>
+                    </form>
+                    <form method="POST" action="/rejeitar_reserva/${r.id}" onsubmit="return confirm('Deseja realmente rejeitar esta reserva?')" style="margin:0">
+                        <input type="hidden" name="csrf_token" value="${CSRF_TOKEN}">
+                        <button type="submit" class="btn btn-outline-danger btn-sm btn-acao-reserva" style="font-size:0.7rem;padding:3px 10px"><span class="btn-label"><i class="bi bi-x"></i> Rejeitar</span></button>
+                    </form>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
     }
 
     // Inicia polling a cada 30 segundos
