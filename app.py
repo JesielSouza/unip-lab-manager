@@ -2048,10 +2048,13 @@ def erro_405(e):
         mensagem='Esta acao nao pode ser realizada desta forma.',
         icone='bi-slash-circle'), 405
 
-# Inicializa o banco ao subir com gunicorn ou diretamente
-with app.app_context():
-    db.create_all()
-    inicializar_unidade()
+# Inicializa o banco ao subir com gunicorn ou diretamente.
+# Para comandos de migration/bootstrap controlado, defina
+# UNIP_SKIP_DB_AUTO_INIT=1 e deixe o Alembic gerenciar o schema.
+if os.environ.get('UNIP_SKIP_DB_AUTO_INIT', '').lower() not in {'1', 'true', 'yes'}:
+    with app.app_context():
+        db.create_all()
+        inicializar_unidade()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')

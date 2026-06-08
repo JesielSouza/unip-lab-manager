@@ -12,24 +12,59 @@ Sistema Flask para gestão de reservas de laboratórios de informática da UNIP.
 - Relatório filtrável para coordenador
 - Bloqueio de laboratórios por período (manutenção, provas)
 
-## Como rodar
+## Como rodar localmente
+
+O banco SQLite local é artefato de desenvolvimento e não deve ser versionado. Use `DATABASE_URL` apontando para um arquivo ignorado, por exemplo `instance/dev.sqlite`.
 
 1. Instale as dependências:
    ```bash
    pip install -r requirements.txt
    ```
 
-2. Execute o sistema (cria o banco e o admin automaticamente):
+2. Crie o diretório local de instância:
    ```bash
-   python app.py
+   mkdir -p instance
    ```
 
-3. Acesse em: `http://localhost:5000`
+3. Defina o banco local ignorado:
+   ```bash
+   DB_PATH=$(python -c "from pathlib import Path; print(Path('instance/dev.sqlite').resolve().as_posix())")
+   export DATABASE_URL="sqlite:///$DB_PATH"
+   ```
+
+4. Aplique as migrations sem o bootstrap automático do app:
+   ```bash
+   UNIP_SKIP_DB_AUTO_INIT=1 uv run --with-requirements requirements.txt flask --app app db upgrade
+   ```
+
+5. Popule dados mínimos de desenvolvimento:
+   ```bash
+   uv run --with-requirements requirements.txt python scripts/seed_dev.py
+   ```
+
+6. Execute o sistema:
+   ```bash
+   uv run --with-requirements requirements.txt python app.py
+   ```
+
+7. Acesse em: `http://localhost:5000`
    - Login padrão: `admin` / `admin123`
+   - Logins dev adicionais criados pelo seed:
+     - `coord_dev` / `unip123`
+     - `prof_dev` / `unip123`
+     - `aluno_dev` / `unip123`
+
+### Observações sobre banco local
+
+- `instance/app.sqlite` não é fonte de verdade do projeto.
+- Produção deve usar `DATABASE_URL` próprio.
+- Arquivos SQLite locais ficam ignorados por `.gitignore`.
+- Para recriar o ambiente local, remova o SQLite ignorado e repita os passos de migration + seed.
 
 ## Utilitários
 
-- `popular_banco.py` — popula o banco com dados de teste (coord, professor, aluno)
+- `scripts/seed_dev.py` — popula banco local/ignorado com dados mínimos de desenvolvimento
+- `popular_banco.py` — utilitário legado para popular dados de teste
 - `reset_db.py` — recria o banco do zero e garante o admin (emergência)
 - `fix_db.py` — normaliza status legados para o padrão atual (uso único)
 
